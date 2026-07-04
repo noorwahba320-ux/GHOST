@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit News' if news else 'Add News' }} — Admin{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-newspaper-o"></i> {{ 'Edit News' if news else 'Add News' }}</h4>
+    <a href="{{ url_for('admin.news') }}" style="color:var(--muted); text-decoration:none; font-size:13px;">
+        <i class="fa fa-arrow-left"></i> Back to News
+    </a>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; max-width:640px;">
+    <form method="POST">
+        <div style="margin-bottom:16px;">
+            <label style="display:block; margin-bottom:6px; font-size:13px; font-weight:600; color:var(--txt);">Headline</label>
+            <input type="text" name="headline" required maxlength="200"
+                   value="{{ news.headline if news else '' }}"
+                   placeholder="News headline"
+                   style="width:100%; padding:10px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--txt); font-size:13px;">
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label style="display:block; margin-bottom:6px; font-size:13px; font-weight:600; color:var(--txt);">Content</label>
+            <textarea name="content" rows="6" placeholder="News content"
+                      style="width:100%; padding:10px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--txt); font-size:13px; resize:vertical;">{{ news.content if news else '' }}</textarea>
+        </div>
+
+        {% if news %}
+        <div style="margin-bottom:20px; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" name="is_active" id="is_active" {% if news.is_active %}checked{% endif %} style="width:16px; height:16px;">
+            <label for="is_active" style="font-size:13px; color:var(--txt);">Active</label>
+        </div>
+        {% endif %}
+
+        <div style="display:flex; gap:10px;">
+            <button type="submit" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:10px 22px; font-size:13px; font-weight:700; cursor:pointer;">
+                <i class="fa fa-save"></i> {{ 'Save Changes' if news else 'Publish News' }}
+            </button>
+            <a href="{{ url_for('admin.news') }}" style="background:transparent; color:var(--muted); border:1px solid var(--border); border-radius:6px; padding:10px 22px; font-size:13px; text-decoration:none;">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

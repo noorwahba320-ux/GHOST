@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+{% block title %}SMS Monitor — FLASH SMS{% endblock %}
+
+{% block extra_css %}
+<style>
+#msgTable tbody tr { transition: background .3s; }
+#msgTable tbody tr.new-row { animation: fadeIn .5s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+.ticker {
+    font-size: 11px; color: var(--text-secondary);
+    display: flex; align-items: center; gap: 6px;
+}
+.countdown-ring {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    animation: spin 6s linear infinite;
+    display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.run-btn { min-width: 130px; }
+.source-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+}
+.pill-p4  { background:#0d2a3e; color:#5bc0f8; border:1px solid #1a4f72; }
+.pill-ts  { background:#0d2e1a; color:#5bf8a0; border:1px solid #1a5e34; }
+.pill-ext { background:#2d2d2d; color:#aaa;    border:1px solid #444; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="breadcrumb">
+    <h4>
+        <span class="live-dot"></span>
+        SMS Monitor
+        <small class="text-muted" style="font-size:13px;font-weight:400;margin-left:8px;">
+            External Sources → Reserved Numbers
+        </small>
+    </h4>
+</div>
+
+<!-- Stats Row -->
+<div class="row" id="statsRow">
+    <div class="col-sm-4">
+        <div class="stat-card">
+            <div class="stat-number" id="statToday">{{ today_count }}</div>
+            <div class="stat-label">Today Received</div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="stat-card">
+            <div class="stat-number" id="statTotal">{{ total_count }}</div>
+            <div class="stat-label">Total Received</div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="stat-card">
+            <div class="stat-number" id="statFetched">—</div>
+            <div class="stat-label">Last Cycle Fetched</div>
+        </div>
+    </div>
+</div>
+
+<!-- Control bar -->
+<div class="widget-block">
+    <div class="widget-head">
+        <h5><i class="fa fa-play-circle"></i> Auto Fetch & Forward</h5>
+        <div class="ticker">
+            <span class="countdown-ring" id="ring"></span>
+            <span id="tickerTxt">refreshing every 6s</span>
+        </div>
+    </div>
+    <div class="widget-content" style="padding:14px 20px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button class="btn btn-primary run-btn" onclick="runCycle('all')" id="btnAll">
+                <i class="fa fa-refresh"></i> Run All
+            </button>
+            <button class="btn btn-info run-btn" onclick="runCycle('panel4')" id="btnP4">
+                <i class="fa fa-server"></i> Panel 4
+            </button>
+            <button class="btn btn-success run-btn" onclick="runCycle('timesms')" id="btnTS">
+                <i class="fa fa-clock-o"></i> TimeSMS
+            </button>
+            <span id="cycleStatus" style="font-size:12px;color:var(--text-secondary);margin-left:6px;"></span>
+        </div>
+    </div>
+</div>
+
+<!-- Sources -->
+<div class="widget-block">
+    <div class="widget-head"><h5><i class="fa fa-plug"></i> Sources</h5></div>
+    <div class="widget-content" style="padding:12px 20px;">
+        <div class="source-bar">
+            <span class="source-pill pill-p4"><i class="fa fa-server"></i> Panel 4</span>
+            <span class="src-name" style="color:var(--text-secondary);font-size:12px;">
+                http://145.239.130.45 — Session + Math Captcha
+            </span>
+            <span class="src-ok" id="p4Status" style="margin-left:auto;">● checking…</span>
+        </div>
+        <div class="source-bar">
+            <span class="source-pill pill-ts"><i class="fa fa-clock-o"></i> TimeSMS</span>
+            <span class="src-name" style="color:var(--text-secondary);font-size:12px;">
+                http://147.135.212.197 — REST API Token
+            </span>
+            <span class="src-ok" id="tsStatus" style="margin-left:auto;">● ready</span>
+        </div>
+    </div>
+</div>
+
+<!-- Messages table -->
+<div class="widget-block">
+    <div class="widget-head">
+        <h5><i class="fa fa-inbox"></i> Received Messages</h5>
+        <span style="font-size:12px;color:var(--text-secondary);" id="lastRefresh">—</span>
+    </div>
+    <div class="widget-content" style="padding:0;">
+        <div class="table-responsive">
+            <table class="table table-hover" id="msgTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Date</th>
+                        <th>Number</th>
+                        <th>Message</th>
+                        <th>Source</th>
+                        <th>Agent</th>
+                    </tr>
+                </thead>
+                <tbody id="msgBody">
+                    <!-- skeleton -->
+                    {% for _ in range(5) %}
+                    <tr class="skeleton-tr">
+                        <td><span class="skeleton skeleton-text" style="width:30px;"></span></td>
+                        <td><span class="skeleton skeleton-text" style="width:110px;"></span></td>
+                        <td><span class="skeleton skeleton-text" style="width:100px;"></span></td>
+                        <td><span class="skeleton skeleton-text" style="width:200px;"></span></td>
+                        <td><span class="skeleton skeleton-text" style="width:70px;"></span></td>
+                        <td><span class="skeleton skeleton-text" style="width:60px;"></span></td>
+                    </tr>
+                    {% endfor %}
+
+                    {% for r in received %}
+                    <tr>
+                        <td style="color:var(--text-secondary);font-size:12px;">{{ r.id }}</td>
+                        <td style="font-size:12px;white-space:nowrap;">
+                            {{ r.created_at.strftime('%Y-%m-%d %H:%M:%S') if r.created_at else '—' }}
+                        </td>
+                        <td><code>{{ r.sms_number.number if r.sms_number else (r.destination or '—') }}</code></td>
+                        <td style="max-width:300px;word-break:break-word;">{{ r.message or '—' }}</td>
+                        <td>
+                            {% if r.cli == 'panel4' %}
+                                <span class="source-pill pill-p4" style="font-size:11px;">Panel 4</span>
+                            {% elif r.cli == 'timesms' %}
+                                <span class="source-pill pill-ts" style="font-size:11px;">TimeSMS</span>
+                            {% else %}
+                                <span class="source-pill pill-ext" style="font-size:11px;">{{ r.cli or 'ext' }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size:12px;">
+                            {{ r.sms_number.agent.username if (r.sms_number and r.sms_number.agent) else '—' }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr id="emptyRow">
+                        <td colspan="6" style="text-align:center;padding:30px;color:var(--text-secondary);">
+                            <i class="fa fa-inbox fa-2x" style="display:block;margin-bottom:8px;"></i>
+                            No messages yet — click "Run All" to start fetching
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var SEEN_IDS = new Set(
+    Array.from(document.querySelectorAll('#msgBody tr[data-id]')).map(r => r.dataset.id)
+);
+var cycleRunning = false;
+
+// ── Run fetch+forward cycle via AJAX ──────────────────────────────────────
+function runCycle(src) {
+    if (cycleRunning) return;
+    cycleRunning = true;
+    document.getElementById('cycleStatus').innerHTML =
+        '<i class="fa fa-spinner fa-spin"></i> fetching…';
+
+    var fd = new FormData();
+    fd.append('source', src);
+
+    fetch('{{ url_for("monitor.run_cycle") }}', {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+        body: fd
+    })
+    .then(r => r.json())
+    .then(data => {
+        var st = data.sources || {};
+        var p4c = (st.panel4  && st.panel4.status  === 'ok') ? st.panel4.count  : null;
+        var tsc = (st.timesms && st.timesms.status === 'ok') ? st.timesms.count : null;
+
+        document.getElementById('statFetched').textContent = data.fetched || 0;
+
+        var parts = [];
+        if (p4c !== null) parts.push('Panel4:' + p4c);
+        if (tsc !== null) parts.push('TimeSMS:' + tsc);
+        parts.push('✅ fwd:' + data.forwarded);
+        document.getElementById('cycleStatus').innerHTML =
+            '<span style="color:#2ed573;">' + parts.join(' | ') + '</span>';
+
+        // Update source status indicators
+        if (st.panel4) {
+            var ok = st.panel4.status === 'ok';
+            document.getElementById('p4Status').innerHTML =
+                ok ? '<span class="src-ok">● connected</span>'
+                   : '<span class="src-err">● ' + st.panel4.status + '</span>';
+        }
+
+        loadMessages();
+        cycleRunning = false;
+    })
+    .catch(function(e) {
+        document.getElementById('cycleStatus').innerHTML =
+            '<span style="color:#ff4757;">❌ ' + e + '</span>';
+        cycleRunning = false;
+    });
+}
+
+// ── Load messages via AJAX ────────────────────────────────────────────────
+function loadMessages() {
+    fetch('{{ url_for("monitor.get_messages") }}?limit=50')
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) return;
+
+        // Update counters
+        document.getElementById('statToday').textContent = data.today_count;
+        document.getElementById('statTotal').textContent = data.total_count;
+        document.getElementById('lastRefresh').textContent =
+            'Last update: ' + new Date().toLocaleTimeString();
+
+        if (!data.messages || !data.messages.length) return;
+
+        var tbody = document.getElementById('msgBody');
+
+        // Remove skeleton rows
+        tbody.querySelectorAll('.skeleton-tr').forEach(r => r.remove());
+
+        // Remove empty row
+        var empty = document.getElementById('emptyRow');
+        if (empty) empty.remove();
+
+        // Prepend new rows
+        var newRows = [];
+        data.messages.forEach(function(m) {
+            if (SEEN_IDS.has(String(m.id))) return;
+            SEEN_IDS.add(String(m.id));
+            newRows.push(m);
+        });
+
+        newRows.reverse().forEach(function(m) {
+            var badge = '';
+            if (m.source === 'panel4') {
+                badge = '<span class="source-pill pill-p4" style="font-size:11px;">Panel 4</span>';
+            } else if (m.source === 'timesms') {
+                badge = '<span class="source-pill pill-ts" style="font-size:11px;">TimeSMS</span>';
+            } else {
+                badge = '<span class="source-pill pill-ext" style="font-size:11px;">' + m.source + '</span>';
+            }
+            var tr = document.createElement('tr');
+            tr.className = 'new-row';
+            tr.setAttribute('data-id', m.id);
+            tr.innerHTML =
+                '<td style="color:var(--text-secondary);font-size:12px;">' + m.id + '</td>' +
+                '<td style="font-size:12px;white-space:nowrap;">' + m.date + '</td>' +
+                '<td><code>' + m.number + '</code></td>' +
+                '<td style="max-width:300px;word-break:break-word;">' +
+                    (m.message.length > 120 ? m.message.substring(0, 120) + '…' : m.message) +
+                '</td>' +
+                '<td>' + badge + '</td>' +
+                '<td style="font-size:12px;">' + m.agent + '</td>';
+            tbody.insertBefore(tr, tbody.firstChild);
+        });
+
+        // Tag existing rows with IDs for dedup
+        tbody.querySelectorAll('tr:not([data-id])').forEach(function(tr) {
+            var firstCell = tr.querySelector('td');
+            if (firstCell) {
+                var id = firstCell.textContent.trim();
+                if (id && !isNaN(id)) {
+                    tr.setAttribute('data-id', id);
+                    SEEN_IDS.add(id);
+                }
+            }
+        });
+    })
+    .catch(function(){});
+}
+
+// ── Auto refresh every 6 seconds ─────────────────────────────────────────
+(function startAutoRefresh() {
+    // Initial load
+    loadMessages();
+    // Auto cycle every 6 seconds: first just refresh messages, every 3rd run also fetch
+    var tick = 0;
+    setInterval(function() {
+        tick++;
+        if (tick % 3 === 0) {
+            // every 18s do a full fetch+forward
+            runCycle('all');
+        } else {
+            // every 6s just refresh the table
+            loadMessages();
+        }
+    }, 6000);
+})();
+
+// ── Initial status check ─────────────────────────────────────────────────
+fetch('{{ url_for("monitor.get_status") }}')
+.then(r => r.json())
+.then(data => {
+    if (data.panel4) {
+        var ok = data.panel4.logged_in;
+        document.getElementById('p4Status').innerHTML =
+            ok ? '<span class="src-ok">● connected</span>'
+               : '<span style="color:#ffa502;">● not logged in</span>';
+    }
+    document.getElementById('tsStatus').innerHTML =
+        '<span class="src-ok">● ready</span>';
+})
+.catch(function(){});
+</script>
+{% endblock %}

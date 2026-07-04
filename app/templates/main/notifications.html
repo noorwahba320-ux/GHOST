@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-bell"></i> Notifications</h4>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px;">
+    <h6 style="font-size:13px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:16px;">
+        <i class="fa fa-bullhorn"></i> System Notifications
+    </h6>
+    <div style="background:rgba(0,212,255,.1); border:1px solid var(--accent); color:var(--accent); border-radius:8px; padding:14px 18px; font-size:13px;">
+        <i class="fa fa-info-circle"></i> No new notifications at this time.
+    </div>
+</div>
+{% endblock %}

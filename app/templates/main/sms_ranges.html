@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}SMS Ranges{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-flag"></i> SMS Ranges</h4>
+    <p style="color:var(--muted); font-size:13px; margin-top:6px;">Range থেকে নাম্বার নিন।</p>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Country</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Prefix</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Daily Limit</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Today Taken</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Take Numbers</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if ranges.items %}
+                {% for r in ranges.items %}
+                <tr style="border-bottom:1px solid var(--border); transition:background .15s;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+                    <td style="padding:12px 16px;"><strong>{{ r.name if r.name else r.country }}</strong>
+                        {% if r.operator %}<br><span style="color:var(--muted); font-size:11px;">{{ r.operator }}</span>{% endif %}
+                    </td>
+                    <td style="padding:12px 16px; font-family:monospace; color:var(--accent);">+{{ r.prefix }}</td>
+                    <td style="padding:12px 16px;">
+                        {% if r.daily_limit > 0 %}
+                        <span style="color:var(--warn); font-weight:700;">{{ r.daily_limit }}</span>
+                        <span style="color:var(--muted); font-size:11px;">/day</span>
+                        {% else %}
+                        <span style="color:var(--muted);">Unlimited</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:12px 16px; color:var(--txt);">
+                        {{ r.get_today_taken_by_agent(current_user.id) }}
+                    </td>
+                    <td style="padding:12px 16px;">
+                        <form method="POST" action="{{ url_for('admin.agent_add_numbers') }}" style="display:flex; gap:6px; align-items:center;">
+                            <input type="hidden" name="range_id" value="{{ r.id }}">
+                            <input type="number" name="numbers_count" value="25" min="1"
+                                {% if r.daily_limit > 0 %}max="{{ r.daily_limit }}"{% endif %}
+                                style="width:70px; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:5px 8px; font-size:13px;">
+                            <button type="submit" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:6px 14px; font-size:13px; font-weight:700; cursor:pointer;">
+                                <i class="fa fa-plus"></i> Take
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="5" style="padding:40px; text-align:center; color:var(--muted);">No ranges available.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block title %}My SMS Numbers{% endblock %}
+
+{% block content %}
+{% if current_user.is_test_account() %}
+<div style="margin-bottom:16px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-list-ol"></i> Test Numbers</h4>
+</div>
+
+<div style="background:linear-gradient(160deg, var(--card) 0%, var(--hover) 100%); border:1px solid var(--border); border-radius:16px; padding:32px 24px; margin-bottom:16px; display:flex; flex-direction:column; align-items:center; gap:18px; text-align:center;">
+    <div>
+        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:6px;">Total Test Numbers</div>
+        <div style="font-size:44px; font-weight:800; color:var(--accent); line-height:1;">{{ total_numbers }}</div>
+    </div>
+    <form method="GET" action="{{ url_for('admin.agent_my_numbers') }}" id="filterForm" style="width:100%; max-width:380px; position:relative;">
+        <i class="fa fa-search" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:13px;"></i>
+        <input type="text" name="search" value="{{ request.args.get('search', '') }}" placeholder="Search a number..."
+            oninput="clearTimeout(window._srT); window._srT = setTimeout(function(){ document.getElementById('filterForm').submit(); }, 500);"
+            style="width:100%; box-sizing:border-box; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:24px; padding:11px 16px 11px 36px; font-size:14px;">
+    </form>
+</div>
+{% else %}
+<div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-list-ol"></i> My SMS Numbers</h4>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <span style="background:var(--card); border:1px solid var(--border); border-radius:6px; padding:6px 14px; font-size:13px;">
+            Total: <strong style="color:var(--accent);">{{ total_numbers }}</strong>
+        </span>
+        <span style="background:var(--card); border:1px solid var(--border); border-radius:6px; padding:6px 14px; font-size:13px;">
+            Assigned: <strong style="color:var(--success);">{{ assigned_count }}</strong>
+        </span>
+        <span style="background:var(--card); border:1px solid var(--border); border-radius:6px; padding:6px 14px; font-size:13px;">
+            Free: <strong style="color:var(--warn);">{{ free_count }}</strong>
+        </span>
+    </div>
+</div>
+
+<!-- Filter -->
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:16px;">
+    <form method="GET" action="{{ url_for('admin.agent_my_numbers') }}" id="filterForm" style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">RANGE</label>
+            <select name="frange" onchange="document.getElementById('filterForm').submit()"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+                <option value="">All Ranges</option>
+                {% for r in ranges %}
+                <option value="{{ r.id }}" {% if request.args.get('frange') == r.id|string %}selected{% endif %}>{{ r.name if r.name else '+' + r.prefix + ' — ' + r.country }}{% if r.operator %} ({{ r.operator }}){% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">CLIENT</label>
+            <select name="fclient" onchange="document.getElementById('filterForm').submit()"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+                <option value="">All</option>
+                <option value="none" {% if request.args.get('fclient') == 'none' %}selected{% endif %}>Unassigned</option>
+                {% for c in clients %}
+                <option value="{{ c.id }}" {% if request.args.get('fclient') == c.id|string %}selected{% endif %}>{{ c.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">SEARCH</label>
+            <input type="text" name="search" value="{{ request.args.get('search', '') }}" placeholder="Number..."
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px; width:140px;">
+        </div>
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">SHOW</label>
+            <select name="per_page" onchange="document.getElementById('filterForm').submit()"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+                {% for n in [25, 50, 100, 500, 1000] %}
+                <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+                {% endfor %}
+                <option value="99999" {% if per_page == 99999 %}selected{% endif %}>All</option>
+            </select>
+        </div>
+        <button type="submit" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:8px 18px; font-size:13px; font-weight:700; cursor:pointer;">
+            <i class="fa fa-filter"></i> Filter
+        </button>
+    </form>
+</div>
+{% endif %}
+
+<!-- Action Form -->
+<form method="POST" id="mainForm">
+    <input type="hidden" name="client_id" id="hiddenClientId">
+    <input type="hidden" name="client_payout" id="hiddenPayout">
+
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+        {% if current_user.is_test_account() %}
+        <div style="padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; color:var(--muted); font-size:13px;">
+            <i class="fa fa-flask" style="color:var(--accent);"></i> Demo view — read-only sample data
+        </div>
+        {% else %}
+        <div style="padding:12px 16px; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+            <span style="font-size:13px; color:var(--muted);">Selected: <strong id="selectedCount" style="color:var(--accent);">0</strong></span>
+            <div style="flex:1;"></div>
+            <button type="button" onclick="openAssignModal()" style="background:var(--success); color:#000; border:none; border-radius:6px; padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer;">
+                <i class="fa fa-user-plus"></i> Assign to Client
+            </button>
+            <button type="button" onclick="submitAction('{{ url_for('admin.agent_bulk_unassign') }}')" style="background:var(--warn); color:#000; border:none; border-radius:6px; padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer;">
+                <i class="fa fa-user-times"></i> Unassign
+            </button>
+            <button type="button" onclick="submitAction('{{ url_for('admin.agent_return_numbers') }}')" style="background:#555; color:#fff; border:none; border-radius:6px; padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer;">
+                <i class="fa fa-undo"></i> Return
+            </button>
+            <button type="button" onclick="submitDownload()" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer;">
+                <i class="fa fa-download"></i> Download CSV
+            </button>
+        </div>
+        {% endif %}
+
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border);">
+                        {% if not current_user.is_test_account() %}
+                        <th style="padding:10px 16px; width:40px;">
+                            <input type="checkbox" id="selectAll" onchange="toggleAll(this)" style="cursor:pointer; width:15px; height:15px;">
+                        </th>
+                        {% endif %}
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">{% if current_user.is_test_account() %}Test Number{% else %}Number{% endif %}</th>
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">Range</th>
+                        {% if not current_user.is_test_account() %}
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">Client</th>
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">OTP Price</th>
+                        {% endif %}
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">Status</th>
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if numbers.items %}
+                    {% for num in numbers.items %}
+                    <tr style="border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+                        {% if not current_user.is_test_account() %}
+                        <td style="padding:10px 16px;">
+                            <input type="checkbox" name="number_ids" value="{{ num.id }}" class="numCheck" onchange="updateCount()" style="cursor:pointer; width:15px; height:15px;">
+                        </td>
+                        {% endif %}
+                        <td style="padding:10px 16px;"><strong style="color:var(--accent); font-family:monospace;">{{ num.number }}</strong></td>
+                        <td style="padding:10px 16px; color:var(--muted);">
+                            {% if num.sms_range %}{{ num.sms_range.name if num.sms_range.name else '+' + num.sms_range.prefix + ' — ' + num.sms_range.country }}{% if num.sms_range.operator %} ({{ num.sms_range.operator }}){% endif %}{% else %}N/A{% endif %}
+                        </td>
+                        {% if not current_user.is_test_account() %}
+                        <td style="padding:10px 16px;">
+                            {% if num.client %}<span style="color:var(--success);">{{ num.client.username }}</span>
+                            {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+                        </td>
+                        <td style="padding:10px 16px;">
+                            {% if num.client_payout > 0 %}<span style="color:var(--warn);">${{ '%.4f'|format(num.client_payout) }}</span>
+                            {% elif num.sms_range and num.sms_range.payout %}<span style="color:var(--muted);" title="Default price for this range — not yet assigned to a client">${{ '%.4f'|format(num.sms_range.payout) }}</span>
+                            {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+                        </td>
+                        {% endif %}
+                        <td style="padding:10px 16px;">
+                            {% if num.status == 'activated' %}
+                            <span style="background:rgba(46,213,115,.15); color:var(--success); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;">ACTIVE</span>
+                            {% elif num.status == 'reserved' %}
+                            <span style="background:rgba(255,165,2,.15); color:var(--warn); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;">RESERVED</span>
+                            {% else %}
+                            <span style="background:rgba(136,136,136,.15); color:var(--muted); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;">{{ num.status|upper }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:10px 16px; color:var(--muted); font-size:12px;">
+                            {{ num.assigned_at.strftime('%Y-%m-%d') if num.assigned_at else '—' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="padding:40px; text-align:center; color:var(--muted);">
+                            <i class="fa fa-inbox" style="font-size:32px; display:block; margin-bottom:10px;"></i>
+                            No numbers found.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if numbers.pages is defined and numbers.pages > 1 %}
+        <div style="padding:14px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+            <span style="font-size:13px; color:var(--muted);">Page {{ numbers.page }} of {{ numbers.pages }} — {{ numbers.total }} total</span>
+            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                {% if numbers.has_prev %}
+                <a href="{{ url_for('admin.agent_my_numbers', page=numbers.prev_num, frange=request.args.get('frange',''), fclient=request.args.get('fclient',''), search=request.args.get('search',''), per_page=per_page) }}"
+                   style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">‹ Prev</a>
+                {% endif %}
+                {% for p in range([1, numbers.page-2]|max, [numbers.pages+1, numbers.page+3]|min) %}
+                <a href="{{ url_for('admin.agent_my_numbers', page=p, frange=request.args.get('frange',''), fclient=request.args.get('fclient',''), search=request.args.get('search',''), per_page=per_page) }}"
+                   style="background:{% if p == numbers.page %}var(--accent){% else %}var(--hover){% endif %}; color:{% if p == numbers.page %}#000{% else %}var(--txt){% endif %}; border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">{{ p }}</a>
+                {% endfor %}
+                {% if numbers.has_next %}
+                <a href="{{ url_for('admin.agent_my_numbers', page=numbers.next_num, frange=request.args.get('frange',''), fclient=request.args.get('fclient',''), search=request.args.get('search',''), per_page=per_page) }}"
+                   style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">Next ›</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</form>
+
+<form method="POST" action="{{ url_for('admin.agent_download_numbers') }}" id="downloadForm"></form>
+
+<!-- Assign Modal -->
+<div id="assignModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:12px; padding:28px; width:100%; max-width:420px; margin:16px;">
+        <h5 style="margin:0 0 20px; color:var(--accent);"><i class="fa fa-user-plus"></i> Assign to Client</h5>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:6px;">SELECT CLIENT</label>
+            <select id="modalClientId" style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+                <option value="">-- Select Client --</option>
+                {% for c in clients %}
+                <option value="{{ c.id }}">{{ c.username }}{% if c.name %} ({{ c.name }}){% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="margin-bottom:20px;">
+            <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:6px;">OTP PRICE (USD per OTP)</label>
+            <input type="number" id="modalPayout" step="0.0001" min="0" value="0.0100"
+                style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button type="button" onclick="confirmAssign()" style="flex:1; background:var(--success); color:#000; border:none; border-radius:6px; padding:10px; font-size:13px; font-weight:700; cursor:pointer;">
+                <i class="fa fa-check"></i> Confirm
+            </button>
+            <button type="button" onclick="closeModal()" style="flex:1; background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:10px; font-size:13px; cursor:pointer;">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+function toggleAll(cb) {
+    document.querySelectorAll('.numCheck').forEach(function(el) { el.checked = cb.checked; });
+    updateCount();
+}
+function updateCount() {
+    var count = document.querySelectorAll('.numCheck:checked').length;
+    var countEl = document.getElementById('selectedCount');
+    if (countEl) countEl.textContent = count;
+    var all = document.querySelectorAll('.numCheck').length;
+    var selectAll = document.getElementById('selectAll');
+    if (selectAll) {
+        selectAll.indeterminate = count > 0 && count < all;
+        selectAll.checked = count === all && all > 0;
+    }
+}
+function getSelectedIds() {
+    var ids = [];
+    document.querySelectorAll('.numCheck:checked').forEach(function(el) { ids.push(el.value); });
+    return ids;
+}
+function submitAction(url) {
+    var ids = getSelectedIds();
+    if (ids.length === 0) { alert('Please select at least one number!'); return; }
+    if (!confirm('Are you sure? (' + ids.length + ' numbers)')) return;
+    var form = document.getElementById('mainForm');
+    form.action = url;
+    form.submit();
+}
+function openAssignModal() {
+    var ids = getSelectedIds();
+    if (ids.length === 0) { alert('Please select at least one number!'); return; }
+    document.getElementById('assignModal').style.display = 'flex';
+}
+function closeModal() {
+    document.getElementById('assignModal').style.display = 'none';
+}
+function confirmAssign() {
+    var clientId = document.getElementById('modalClientId').value;
+    var payout = document.getElementById('modalPayout').value;
+    if (!clientId) { alert('Please select a client!'); return; }
+    document.getElementById('hiddenClientId').value = clientId;
+    document.getElementById('hiddenPayout').value = payout;
+    var form = document.getElementById('mainForm');
+    form.action = '{{ url_for("admin.agent_bulk_assign") }}';
+    form.submit();
+}
+function submitDownload() {
+    var ids = getSelectedIds();
+    var form = document.getElementById('downloadForm');
+    form.querySelectorAll('input[name="number_ids"]').forEach(function(el) { el.remove(); });
+    ids.forEach(function(id) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = 'number_ids'; inp.value = id;
+        form.appendChild(inp);
+    });
+    form.submit();
+}
+document.getElementById('assignModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+</script>
+{% endblock %}
+{% endblock %}

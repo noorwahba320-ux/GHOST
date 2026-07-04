@@ -1,0 +1,9 @@
+flash_sms.db
+logs/
+*.pyc
+__pycache__/
+.env
+nginx_power-sms.conf
+power-sms.service
+gunicorn_conf.py
+deploy.sh

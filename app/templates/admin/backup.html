@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Backup & Restore — FLASH SMS{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-database"></i> Backup &amp; Restore</h4>
+    <p style="color:var(--muted); font-size:13px; margin-top:6px;">Download a full copy of your panel's data. If the server is ever wiped or you move to a new one, upload this file back here to restore everything — users, numbers, ranges, SMS history and settings.</p>
+</div>
+
+{% if not is_sqlite %}
+<div class="alert alert-warning" style="margin-bottom:20px;">
+    <i class="fa fa-exclamation-triangle"></i>
+    This panel is configured to use an external database (not local SQLite), so file-based backup/restore isn't available here — please use your database provider's own backup tools.
+</div>
+{% endif %}
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px;">
+
+    <!-- Download -->
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:22px;">
+        <h6 style="font-size:14px; font-weight:800; color:var(--txt); margin-bottom:10px;"><i class="fa fa-download"></i> Download Backup</h6>
+        <p style="color:var(--muted); font-size:13px; margin-bottom:16px;">Saves a single file with everything currently in your panel.</p>
+        {% if db_available %}
+        <a href="{{ url_for('admin.backup_download') }}" style="display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg,#4338ca,#0ea5e9); color:#fff; font-weight:700; border-radius:8px; padding:11px 22px; font-size:14px; text-decoration:none;">
+            <i class="fa fa-download"></i> Download Data File
+        </a>
+        {% else %}
+        <span style="color:var(--muted); font-size:13px;">No local database file found.</span>
+        {% endif %}
+    </div>
+
+    <!-- Restore -->
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:22px;">
+        <h6 style="font-size:14px; font-weight:800; color:var(--txt); margin-bottom:10px;"><i class="fa fa-upload"></i> Restore From Backup</h6>
+        <p style="color:var(--muted); font-size:13px; margin-bottom:16px;">Uploading a backup file will <strong>replace all current data</strong>. A safety copy of the current database is kept automatically.</p>
+        <form method="POST" action="{{ url_for('admin.backup_restore') }}" enctype="multipart/form-data" onsubmit="return confirm('This will replace all current panel data with the uploaded backup. Continue?');">
+            <input type="file" name="backup_file" accept=".db,.sqlite,.sqlite3" required
+                style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:8px; padding:10px 12px; font-size:13px; margin-bottom:14px;">
+            <button type="submit" style="background:rgba(220,38,38,.12); border:1px solid var(--danger); color:var(--danger); border-radius:8px; padding:11px 22px; font-size:14px; font-weight:700; cursor:pointer;">
+                <i class="fa fa-upload"></i> Restore Backup
+            </button>
+        </form>
+    </div>
+</div>
+
+<div style="margin-top:20px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px 22px;">
+    <h6 style="font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;"><i class="fa fa-info-circle"></i> How it works</h6>
+    <ol style="color:var(--muted); font-size:13px; line-height:1.9; padding-left:18px; margin:0;">
+        <li>Click <strong>Download Data File</strong> regularly (e.g. weekly) and keep it somewhere safe.</li>
+        <li>If you set up the panel on a new server, deploy the app first without changing any data.</li>
+        <li>Log in as admin, come back to this page, and upload the saved file under <strong>Restore From Backup</strong>.</li>
+        <li>Restart the app service so every connection picks up the restored data.</li>
+    </ol>
+</div>
+{% endblock %}

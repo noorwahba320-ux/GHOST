@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — FLASH SMS{% endblock %}
+
+{% block content %}
+
+<style>
+.dash-header{margin-bottom:22px;}
+.dash-header h2{font-size:22px;font-weight:800;color:var(--txt);margin-bottom:4px;}
+.dash-header .crumb{font-size:12.5px;color:var(--muted);}
+.dash-header .crumb span{color:var(--accent);font-weight:600;}
+
+.hero-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:26px;margin-bottom:28px;}
+.hero-card{
+    border-radius:14px;padding:14px 16px;color:#fff;
+    box-shadow:0 8px 18px rgba(0,0,0,.16);
+    position:relative;overflow:hidden;
+}
+.hero-card .h-label{font-size:12px;font-weight:600;opacity:.95;margin-bottom:8px;}
+.hero-card .h-value{font-size:23px;font-weight:800;line-height:1;}
+.hero-card .h-unit{font-size:12px;font-weight:600;opacity:.9;margin-left:4px;}
+.hero-card .h-profit{font-size:11px;font-weight:700;opacity:.95;margin-top:6px;display:flex;align-items:center;gap:4px;}
+.hc-today{background:linear-gradient(135deg,#ff7b6b 0%,#e0231f 100%);}
+.hc-yesterday{background:linear-gradient(135deg,#ffc266 0%,#f2960c 100%);}
+.hc-week{background:linear-gradient(135deg,#5fb0ff 0%,#2266e6 100%);}
+.hc-month{background:linear-gradient(135deg,#4fe08f 0%,#0aa85f 100%);}
+.hc-agents{background:linear-gradient(135deg,#4f46e5 0%,#4338ca 100%);}
+.hc-clients{background:linear-gradient(135deg,#0ea5e9 0%,#0369a1 100%);}
+.hc-numbers{background:linear-gradient(135deg,#10b981 0%,#047857 100%);}
+.hc-ranges{background:linear-gradient(135deg,#f59e0b 0%,#b45309 100%);}
+.hc-sms{background:linear-gradient(135deg,#ff7b6b 0%,#e0231f 100%);}
+.hc-active{background:linear-gradient(135deg,#8b5cf6 0%,#6d28d9 100%);}
+
+.stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:24px; margin-bottom:28px;}
+.stat-box{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:12px 14px;}
+.stat-box .s-label{font-size:10px; color:var(--muted); font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;}
+.stat-box .s-value{font-size:19px; font-weight:800; color:var(--txt);}
+
+.test-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(139,92,246,.15);color:#8b5cf6;border:1px solid rgba(139,92,246,.35);padding:3px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-left:10px;vertical-align:middle;}
+.test-hero{border-radius:18px;padding:30px 28px;color:#fff;background:linear-gradient(135deg,#7c3aed 0%,#4c1d95 100%);box-shadow:0 12px 28px rgba(124,58,237,.28);margin-bottom:20px;position:relative;overflow:hidden;}
+.test-hero::after{content:"";position:absolute;right:-30px;top:-30px;width:160px;height:160px;background:rgba(255,255,255,.08);border-radius:50%;}
+.test-hero .th-label{font-size:14px;font-weight:700;opacity:.9;margin-bottom:10px;}
+.test-hero .th-value{font-size:46px;font-weight:800;line-height:1;}
+.test-hero .th-unit{font-size:15px;font-weight:600;opacity:.85;margin-left:6px;}
+.test-hero .th-note{font-size:12.5px;opacity:.85;margin-top:12px;}
+.test-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px;}
+.test-action-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;text-decoration:none;display:flex;align-items:center;gap:14px;transition:all .2s;}
+.test-action-card:hover{border-color:#8b5cf6;transform:translateY(-2px);}
+.test-action-card .tac-icon{width:42px;height:42px;border-radius:10px;background:rgba(139,92,246,.15);color:#8b5cf6;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.test-action-card .tac-title{font-size:14px;font-weight:700;color:var(--txt);}
+.test-action-card .tac-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+</style>
+
+<div class="dash-header">
+    <h2>
+        {% if is_test_view %}Test Account{% elif is_admin_view %}Admin Overview{% else %}SMS Dashboard{% endif %}
+        {% if is_test_view %}<span class="test-badge"><i class="fa fa-flask"></i> Test Mode</span>{% endif %}
+    </h2>
+    <div class="crumb">Home / <span>Dashboard</span></div>
+</div>
+
+{% if is_test_view %}
+<!-- Test123: single Today SMS hero, no earnings, no API -->
+<div class="test-hero">
+    <div class="th-label"><i class="fa fa-flask"></i> Today SMS</div>
+    <div class="th-value">{{ today_sms|default(0) }}<span class="th-unit">SMS received today</span></div>
+    <div class="th-note">This is a demo/testing account — no API access, no earnings. It comes preloaded with {{ numbers_count|default(0) }} test numbers from the active range.</div>
+</div>
+
+<div class="test-actions">
+    <a href="{{ url_for('admin.agent_my_numbers') }}" class="test-action-card">
+        <div class="tac-icon"><i class="fa fa-list-ol"></i></div>
+        <div>
+            <div class="tac-title">Test Numbers</div>
+            <div class="tac-sub">{{ numbers_count|default(0) }} numbers available</div>
+        </div>
+    </a>
+    <a href="{{ url_for('main.sms_cdr_reports') }}" class="test-action-card">
+        <div class="tac-icon"><i class="fa fa-bar-chart"></i></div>
+        <div>
+            <div class="tac-title">Statistics</div>
+            <div class="tac-sub">View received OTP codes</div>
+        </div>
+    </a>
+</div>
+
+{% elif is_admin_view %}
+<!-- Admin: system-wide overview -->
+<div class="hero-grid">
+    <div class="hero-card hc-agents">
+        <div class="h-label">Total Agents</div>
+        <div class="h-value">{{ total_agents|default(0) }}</div>
+    </div>
+    <div class="hero-card hc-clients">
+        <div class="h-label">Total Clients</div>
+        <div class="h-value">{{ total_clients|default(0) }}</div>
+    </div>
+    <div class="hero-card hc-numbers">
+        <div class="h-label">Total Numbers</div>
+        <div class="h-value">{{ total_numbers|default(0) }}</div>
+    </div>
+    <div class="hero-card hc-sms">
+        <div class="h-label">Total SMS (All Time)</div>
+        <div class="h-value">{{ total_sms|default(0) }}</div>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-box">
+        <div class="s-label">SMS Ranges</div>
+        <div class="s-value">{{ ranges_count|default(0) }}</div>
+    </div>
+    <div class="stat-box">
+        <div class="s-label">Active Users</div>
+        <div class="s-value">{{ active_users|default(0) }}</div>
+    </div>
+</div>
+{% elif is_client_view %}
+<!-- Client: Today SMS + Yesterday SMS only — no profit, no API, nothing else -->
+<div class="hero-grid">
+    <div class="hero-card hc-today">
+        <div class="h-label">Today SMS</div>
+        <div class="h-value">{{ today_sms|default(0) }}<span class="h-unit">SMS</span></div>
+    </div>
+    <div class="hero-card hc-yesterday">
+        <div class="h-label">Yesterday SMS</div>
+        <div class="h-value">{{ yesterday_sms|default(0) }}<span class="h-unit">SMS</span></div>
+    </div>
+</div>
+{% else %}
+<!-- Agent: personal SMS counters + earnings -->
+<div class="hero-grid">
+    <div class="hero-card hc-today">
+        <div class="h-label">Today SMS</div>
+        <div class="h-value">{{ today_sms|default(0) }}<span class="h-unit">SMS</span></div>
+        <div class="h-profit">▲ ${{ '%.4f'|format(today_earnings|float if today_earnings else 0) }} Profit</div>
+    </div>
+    <div class="hero-card hc-yesterday">
+        <div class="h-label">Yesterday SMS</div>
+        <div class="h-value">{{ yesterday_sms|default(0) }}<span class="h-unit">SMS</span></div>
+        <div class="h-profit">▲ ${{ '%.4f'|format(yesterday_earnings|float if yesterday_earnings else 0) }} Profit</div>
+    </div>
+    <div class="hero-card hc-week">
+        <div class="h-label">Week SMS</div>
+        <div class="h-value">{{ week_sms|default(0) }}<span class="h-unit">SMS</span></div>
+        <div class="h-profit">▲ ${{ '%.4f'|format(week_earnings|float if week_earnings else 0) }} Profit</div>
+    </div>
+    <div class="hero-card hc-month">
+        <div class="h-label">Month SMS</div>
+        <div class="h-value">{{ month_total|default(0) }}<span class="h-unit">SMS</span></div>
+        <div class="h-profit">▲ ${{ '%.4f'|format(month_earnings|float if month_earnings else 0) }} Profit</div>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-box">
+        <div class="s-label">SMS Ranges</div>
+        <div class="s-value">{{ ranges_count|default(0) }}</div>
+    </div>
+    <div class="stat-box">
+        <div class="s-label">My Numbers</div>
+        <div class="s-value">{{ numbers_count|default(0) }}</div>
+    </div>
+    <div class="stat-box">
+        <div class="s-label">My Clients</div>
+        <div class="s-value">{{ clients_count|default(0) }}</div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Chart + News -->
+<div class="grid-2-1" style="margin-bottom:24px;">
+
+    <!-- Chart -->
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px;">
+        <h6 style="font-size:13px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:16px;">
+            <i class="fa fa-bar-chart"></i> SMS Activity (Last 7 Days)
+        </h6>
+        <canvas id="smsChart" height="120"></canvas>
+    </div>
+
+    <!-- News -->
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px;">
+        <h6 style="font-size:13px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:16px;">
+            <i class="fa fa-bullhorn"></i> Latest News
+        </h6>
+        {% if news %}
+        {% for item in news %}
+        <div style="padding:10px 0; border-bottom:1px solid var(--border);">
+            <div style="font-weight:600; font-size:13px; color:var(--txt);">{{ item.headline }}</div>
+            <div style="font-size:11px; color:var(--muted); margin-top:4px;">{{ item.created_at.strftime('%Y-%m-%d') if item.created_at else '' }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p style="color:var(--muted); font-size:13px;">No news available.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if is_test_view %}
+<!-- Test123 has its own action cards above; nothing else to show here -->
+{% elif is_admin_view %}
+<!-- Admin Quick Links -->
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px;">
+    <h6 style="font-size:13px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:16px;">
+        <i class="fa fa-link"></i> Quick Links
+    </h6>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px;">
+        <a href="{{ url_for('admin.users') }}" style="display:flex; align-items:center; gap:10px; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:12px 16px; text-decoration:none; color:var(--txt);">
+            <i class="fa fa-users" style="color:var(--accent);"></i> Manage Users
+        </a>
+        <a href="{{ url_for('admin.sms_ranges') }}" style="display:flex; align-items:center; gap:10px; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:12px 16px; text-decoration:none; color:var(--txt);">
+            <i class="fa fa-flag" style="color:var(--accent);"></i> SMS Ranges
+        </a>
+        <a href="{{ url_for('admin.sms_numbers') }}" style="display:flex; align-items:center; gap:10px; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:12px 16px; text-decoration:none; color:var(--txt);">
+            <i class="fa fa-phone" style="color:var(--accent);"></i> All Numbers
+        </a>
+        <a href="{{ url_for('admin.sms_cdr') }}" style="display:flex; align-items:center; gap:10px; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:12px 16px; text-decoration:none; color:var(--txt);">
+            <i class="fa fa-file-text" style="color:var(--accent);"></i> CDR
+        </a>
+        <a href="{{ url_for('admin.index') }}" style="display:flex; align-items:center; gap:10px; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:12px 16px; text-decoration:none; color:var(--txt);">
+            <i class="fa fa-shield" style="color:var(--accent);"></i> Admin Panel
+        </a>
+    </div>
+</div>
+
+{% elif not current_user.is_client() %}
+<!-- Agent: Recent Clients + Quick Links -->
+<div class="grid-1-1">
+
+    <!-- Recent Clients -->
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+        <div style="padding:14px 20px; border-bottom:1px solid var(--border);">
+            <h6 style="margin:0; font-size:13px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase;">
+                <i class="fa fa-users"></i> Recent Clients
+            </h6>
+        </div>
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">Username</th>
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">Email</th>
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if recent_clients %}
+                    {% for client in recent_clients %}
+                    <tr style="border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+                        <td style="padding:10px 16px; color:var(--accent);">{{ client.username }}</td>
+                        <td style="padding:10px 16px; color:var(--muted); font-size:12px;">{{ client.email }}</td>
+                        <td style="padding:10px 16px;">
+                            {% if client.is_active %}
+                            <span style="background:rgba(16,185,129,.15); color:var(--success); padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700;">Active</span>
+                            {% else %}
+                            <span style="background:rgba(220,38,38,.15); color:var(--danger); padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700;">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="3" style="padding:20px; text-align:center; color:var(--muted);">No clients yet.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px;">
+        <h6 style="font-size:13px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:16px;">
+            <i class="fa fa-link"></i> Quick Links
+        </h6>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            <a href="{{ url_for('admin.agent_add_numbers') }}" style="display:flex; align-items:center; gap:10px; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:12px 16px; text-decoration:none; color:var(--txt); transition:all .2s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--txt)'">
+                <i class="fa fa-plus-circle" style="color:var(--accent);"></i> Add Numbers
+            </a>
+            <a href="{{ url_for('admin.agent_my_numbers') }}" style="display:flex; align-items:center; gap:10px; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:12px 16px; text-decoration:none; color:var(--txt); transition:all .2s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--txt)'">
+                <i class="fa fa-list-ol" style="color:var(--accent);"></i> My Numbers
+            </a>
+            <a href="{{ url_for('admin.agent_clients') }}" style="display:flex; align-items:center; gap:10px; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:12px 16px; text-decoration:none; color:var(--txt); transition:all .2s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--txt)'">
+                <i class="fa fa-users" style="color:var(--accent);"></i> My Clients
+            </a>
+            <a href="{{ url_for('admin.agent_client_stats') }}" style="display:flex; align-items:center; gap:10px; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:12px 16px; text-decoration:none; color:var(--txt); transition:all .2s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--txt)'">
+                <i class="fa fa-bar-chart" style="color:var(--accent);"></i> Client Statistics
+            </a>
+            <a href="{{ url_for('main.sms_cdr_reports') }}" style="display:flex; align-items:center; gap:10px; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:12px 16px; text-decoration:none; color:var(--txt); transition:all .2s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--txt)'">
+                <i class="fa fa-file-text" style="color:var(--accent);"></i> CDR Reports
+            </a>
+            <a href="{{ url_for('main.cr_api') }}" style="display:flex; align-items:center; gap:10px; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:12px 16px; text-decoration:none; color:var(--txt); transition:all .2s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--txt)'">
+                <i class="fa fa-code" style="color:var(--accent);"></i> CR API
+            </a>
+        </div>
+    </div>
+</div>
+{% else %}
+<!-- Client-only quick link -->
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px;">
+    <h6 style="font-size:13px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:16px;">
+        <i class="fa fa-link"></i> Quick Links
+    </h6>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+        <a href="{{ url_for('main.sms_cdr_reports') }}" style="display:flex; align-items:center; gap:10px; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:12px 16px; text-decoration:none; color:var(--txt);">
+            <i class="fa fa-file-text" style="color:var(--accent);"></i> CDR Reports
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var ctx = document.getElementById('smsChart').getContext('2d');
+    var chartData = {{ chart_data|tojson|safe }};
+    var labels = chartData.map(function(item) { return item.date; });
+    var data = chartData.map(function(item) { return item.count; });
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'SMS Count',
+                data: data,
+                backgroundColor: 'rgba(79,70,229,0.35)',
+                borderColor: 'rgba(79,70,229,1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: '#888', font: { size: 12 } } }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#888' },
+                    grid: { color: '#2e2e2e' }
+                },
+                x: {
+                    ticks: { color: '#888' },
+                    grid: { color: '#2e2e2e' }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

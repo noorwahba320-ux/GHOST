@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit User' if user else 'Create User' }} — Admin{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px; display:flex; align-items:center; gap:12px;">
+    <a href="{{ url_for('admin.users') }}" style="color:var(--muted); text-decoration:none; font-size:13px;">
+        <i class="fa fa-arrow-left"></i> Back to Users
+    </a>
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-user"></i> {{ 'Edit User' if user else 'Create User' }}</h4>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; max-width:600px;">
+    <form method="POST" action="{{ url_for('admin.create_user') if not user else url_for('admin.edit_user', user_id=user.id) }}">
+
+        <div style="margin-bottom:14px;">
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:600; letter-spacing:1px; text-transform:uppercase;">Username *</label>
+            <input type="text" name="username" value="{{ user.username if user else '' }}" required {% if user %}readonly{% endif %}
+                style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+        </div>
+
+        <div style="margin-bottom:14px;">
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:600; letter-spacing:1px; text-transform:uppercase;">Email *</label>
+            <input type="email" name="email" value="{{ user.email if user else '' }}" required
+                style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+        </div>
+
+        <div style="margin-bottom:14px;">
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:600; letter-spacing:1px; text-transform:uppercase;">Password {% if not user %}*{% endif %}</label>
+            <input type="password" name="password" {% if not user %}required{% endif %}
+                style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            {% if user %}<div style="font-size:11px; color:var(--muted); margin-top:4px;">Leave blank to keep current password</div>{% endif %}
+        </div>
+
+        <div style="margin-bottom:14px;">
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:600; letter-spacing:1px; text-transform:uppercase;">Role *</label>
+            <select name="role_id" required style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+                {% for role in roles %}
+                <option value="{{ role.id }}" {% if user and user.role_id == role.id %}selected{% endif %}>{{ role.display_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="margin-bottom:14px;">
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:600; letter-spacing:1px; text-transform:uppercase;">Agent (for clients)</label>
+            <select name="agent_id" style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+                <option value="">None</option>
+                {% for agent in agents %}
+                <option value="{{ agent.id }}" {% if user and user.agent_id == agent.id %}selected{% endif %}>{{ agent.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="grid-1-1" style="margin-bottom:14px;">
+            <div>
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:600; letter-spacing:1px; text-transform:uppercase;">Full Name</label>
+                <input type="text" name="name" value="{{ user.name if user else '' }}"
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+            <div>
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:600; letter-spacing:1px; text-transform:uppercase;">Company</label>
+                <input type="text" name="company" value="{{ user.company if user else '' }}"
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+        </div>
+
+        <div class="grid-1-1" style="margin-bottom:14px;">
+            <div>
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:600; letter-spacing:1px; text-transform:uppercase;">Country</label>
+                <input type="text" name="country" value="{{ user.country if user else '' }}"
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+            <div>
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:600; letter-spacing:1px; text-transform:uppercase;">Contact</label>
+                <input type="text" name="contact" value="{{ user.contact if user else '' }}"
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+        </div>
+
+        <div class="grid-1-1" style="margin-bottom:20px;">
+            <div>
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:600; letter-spacing:1px; text-transform:uppercase;">SMS Limit (0 = unlimited)</label>
+                <input type="number" name="sms_limit" value="{{ user.sms_limit if user else '0' }}"
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+            <div>
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:600; letter-spacing:1px; text-transform:uppercase;">Active</label>
+                <select name="is_active" style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+                    <option value="1" {% if not user or user.is_active %}selected{% endif %}>Yes</option>
+                    <option value="0" {% if user and not user.is_active %}selected{% endif %}>No</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+            <button type="submit" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:10px 24px; font-size:13px; font-weight:700; cursor:pointer;">
+                <i class="fa fa-save"></i> Save
+            </button>
+            <a href="{{ url_for('admin.users') }}" style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:10px 18px; font-size:13px; text-decoration:none;">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

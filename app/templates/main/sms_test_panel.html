@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}SMS Test Panel{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-rss"></i> SMS Test Panel</h4>
+    <span style="background:var(--card); border:1px solid var(--border); border-radius:6px; padding:6px 14px; font-size:13px;">
+        Total SMS: <strong style="color:var(--accent);">{{ total_sms }}</strong>
+    </span>
+</div>
+
+<p style="color:var(--muted); font-size:13px; margin-bottom:16px;">
+    Live feed of all incoming SMS/OTP across all ranges. See which country and platform OTPs are arriving right now.
+</p>
+
+<!-- Filter -->
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:16px;">
+    <form method="GET" id="filterForm" style="display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end;">
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">RANGE</label>
+            <select name="frange" onchange="document.getElementById('filterForm').submit()"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+                <option value="">All Ranges</option>
+                {% for r in ranges %}
+                <option value="{{ r.id }}" {% if request.args.get('frange') == r.id|string %}selected{% endif %}>{{ r.name if r.name else '+' + r.prefix + ' — ' + r.country }}{% if r.operator %} ({{ r.operator }}){% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">SHOW</label>
+            <select name="per_page" onchange="document.getElementById('filterForm').submit()"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+                {% for n in [25, 50, 100] %}
+                <option value="{{ n }}" {% if request.args.get('per_page', '25') == n|string %}selected{% endif %}>{{ n }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:8px 18px; font-size:13px; font-weight:700; cursor:pointer;">
+            <i class="fa fa-filter"></i> Filter
+        </button>
+    </form>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Date/Time</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Range</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Number</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">CLI</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">SMS Content</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if cdr_records.items %}
+                {% for cdr in cdr_records.items %}
+                <tr style="border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+                    <td style="padding:12px 16px; color:var(--muted); font-size:12px;">{{ cdr.created_at.strftime('%Y-%m-%d %H:%M:%S') if cdr.created_at else '—' }}</td>
+                    <td style="padding:12px 16px; color:var(--accent);">
+                        {% if cdr.range_info %}{{ cdr.range_info.name if cdr.range_info.name else '+' + cdr.range_info.prefix + ' — ' + cdr.range_info.country }}{% if cdr.range_info.operator %} ({{ cdr.range_info.operator }}){% endif %}{% else %}N/A{% endif %}
+                    </td>
+                    <td style="padding:12px 16px; font-family:monospace; color:var(--txt);">{{ cdr.sms_number.number if cdr.sms_number else '—' }}</td>
+                    <td style="padding:12px 16px; color:var(--warn);">{{ cdr.cli or '—' }}</td>
+                    <td style="padding:12px 16px; color:var(--txt); max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ cdr.message[:80] if cdr.message else '—' }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="5" style="padding:40px; text-align:center; color:var(--muted);">
+                        <i class="fa fa-inbox" style="font-size:32px; display:block; margin-bottom:10px;"></i>
+                        No SMS received yet.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if cdr_records.pages > 1 %}
+    <div style="padding:14px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <span style="font-size:13px; color:var(--muted);">Page {{ cdr_records.page }} of {{ cdr_records.pages }} — {{ cdr_records.total }} total</span>
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+            {% if cdr_records.has_prev %}
+            <a href="{{ url_for('main.sms_test_panel', page=cdr_records.prev_num, frange=request.args.get('frange',''), per_page=request.args.get('per_page','25')) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">‹ Prev</a>
+            {% endif %}
+            {% for p in range([1, cdr_records.page-2]|max, [cdr_records.pages+1, cdr_records.page+3]|min) %}
+            <a href="{{ url_for('main.sms_test_panel', page=p, frange=request.args.get('frange',''), per_page=request.args.get('per_page','25')) }}"
+               style="background:{% if p == cdr_records.page %}var(--accent){% else %}var(--hover){% endif %}; color:{% if p == cdr_records.page %}#000{% else %}var(--txt){% endif %}; border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">{{ p }}</a>
+            {% endfor %}
+            {% if cdr_records.has_next %}
+            <a href="{{ url_for('main.sms_test_panel', page=cdr_records.next_num, frange=request.args.get('frange',''), per_page=request.args.get('per_page','25')) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">Next ›</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

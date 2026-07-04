@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ panel_settings.panel_name if panel_settings else 'FLASH SMS' }} PANEL{% endblock %}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    {% block extra_css %}{% endblock %}
+    <style>
+    :root {
+        --bg:      #0a0e27;
+        --card:    #111827;
+        --hover:   #1f2937;
+        --border:  #374151;
+        --txt:     #f3f4f6;
+        --muted:   #9ca3af;
+        --accent:  #4f46e5;
+        --accent-light: #38bdf8;
+        --accent2: #06b6d4;
+        --topbar-grad-1: #4338ca;
+        --topbar-grad-2: #0ea5e9;
+        --danger:  #dc2626;
+        --success: #10b981;
+        --success-light: #6ee7b7;
+        --warn:    #f59e0b;
+        --info:    #06b6d4;
+        --sb-w:    260px;
+        --nav-h:   64px;
+        --radius:  12px;
+    }
+    
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{font-size:14px;scroll-behavior:smooth;}
+    body{
+        font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;
+        background:linear-gradient(135deg, var(--bg) 0%, #0f1419 100%);
+        color:var(--txt);
+        min-height:100vh;
+    }
+    a{color:var(--accent);text-decoration:none;transition:all .2s;}
+    a:hover{color:var(--accent-light);opacity:.9;}
+    
+    /* Alerts */
+    .alert-success{background:rgba(16,185,129,.12);border:1px solid var(--success);color:var(--success-light);}
+    .alert-danger{background:rgba(239,68,68,.12);border:1px solid var(--danger);color:#fca5a5;}
+    .alert-warning{background:rgba(245,158,11,.12);border:1px solid var(--warn);color:var(--warn);}
+    .alert-info{background:rgba(6,182,212,.12);border:1px solid var(--info);color:var(--info);}
+    
+    /* Top Navigation Bar */
+    .topbar {
+        position:fixed;top:0;left:0;right:0;z-index:1050;
+        height:var(--nav-h);
+        background:linear-gradient(90deg, var(--topbar-grad-1) 0%, var(--topbar-grad-2) 100%);
+        border-bottom:1px solid var(--border);
+        display:flex;align-items:center;padding:0 20px;gap:16px;
+        box-shadow:0 4px 12px rgba(0,0,0,.3);
+    }
+    
+    .topbar-brand {
+        font-size:20px;font-weight:900;letter-spacing:2px;
+        color:#fff;
+        text-decoration:none;white-space:nowrap;
+        display:flex;align-items:center;gap:8px;
+        transition:transform .2s;
+    }
+    .topbar-brand:hover{transform:scale(1.02);text-decoration:none;}
+    .topbar-brand i{font-size:24px;}
+    
+    .topbar-spacer{flex:1;}
+    
+    .topbar-user {
+        display:flex;align-items:center;gap:12px;
+        color:var(--muted);font-size:13px;white-space:nowrap;
+    }
+    .topbar-user strong{color:var(--txt);}
+    .topbar-user a{color:var(--muted);font-size:12px;transition:all .2s;}
+    .topbar-user a:hover{color:var(--accent);}
+    
+    .hamburger {
+        background:none;border:none;cursor:pointer;
+        color:#fff;font-size:22px;padding:8px;
+        border-radius:8px;transition:all .2s;display:none;
+    }
+    .hamburger:hover{background:rgba(255,255,255,.15);}
+
+    /* Light theme override */
+    html[data-theme="light"] {
+        --bg:      #f3f4f6;
+        --card:    #ffffff;
+        --hover:   #f1f2f6;
+        --border:  #e2e4ea;
+        --txt:     #1a1a2e;
+        --muted:   #6b7280;
+    }
+    html[data-theme="light"] body{background:linear-gradient(135deg, var(--bg) 0%, #eceef2 100%);}
+
+    /* Topbar action icons (theme toggle / settings) */
+    .topbar-icon-btn{
+        background:none;border:none;cursor:pointer;
+        color:var(--muted);font-size:18px;width:38px;height:38px;
+        border-radius:50%;display:flex;align-items:center;justify-content:center;
+        transition:all .2s;
+    }
+    .topbar-icon-btn:hover{background:var(--hover);color:var(--accent);}
+
+    /* Avatar + dropdown */
+    .user-menu{position:relative;}
+    .avatar-btn{
+        width:38px;height:38px;border-radius:50%;
+        background:linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+        color:#fff;font-weight:700;font-size:14px;
+        display:flex;align-items:center;justify-content:center;
+        border:none;cursor:pointer;transition:all .2s;
+    }
+    .avatar-btn:hover{transform:scale(1.05);}
+    .user-dropdown{
+        position:absolute;right:0;top:calc(100% + 10px);
+        width:230px;background:var(--card);border:1px solid var(--border);
+        border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.35);
+        overflow:hidden;z-index:1100;
+        opacity:0;visibility:hidden;transform:translateY(-6px);
+        transition:all .18s ease;
+    }
+    .user-dropdown.open{opacity:1;visibility:visible;transform:translateY(0);}
+    .user-dropdown .ud-head{
+        padding:14px 16px;border-bottom:1px solid var(--border);
+    }
+    .user-dropdown .ud-head strong{display:block;color:var(--txt);font-size:14px;}
+    .user-dropdown .ud-head span{color:var(--muted);font-size:12px;}
+    .user-dropdown a{
+        display:flex;align-items:center;gap:10px;
+        padding:11px 16px;color:var(--txt);font-size:13.5px;
+        transition:all .15s;
+    }
+    .user-dropdown a i{width:16px;color:var(--muted);}
+    .user-dropdown a:hover{background:var(--hover);color:var(--accent);}
+    .user-dropdown a.ud-logout{color:var(--danger);border-top:1px solid var(--border);}
+    .user-dropdown a.ud-logout i{color:var(--danger);}
+    .user-dropdown a.ud-logout:hover{background:rgba(220,38,38,.1);}
+    
+    /* Sidebar */
+    .sidebar {
+        position:fixed;top:var(--nav-h);left:0;
+        width:var(--sb-w);height:calc(100vh - var(--nav-h));
+        background:linear-gradient(180deg, var(--card) 0%, #0d1117 100%);
+        border-right:1px solid var(--border);
+        overflow-y:auto;z-index:1040;
+        transition:transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    
+    .sidebar::-webkit-scrollbar{width:6px;}
+    .sidebar::-webkit-scrollbar-track{background:transparent;}
+    .sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+    .sidebar::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+    
+    .sb-user{
+        padding:20px;
+        border-bottom:1px solid var(--border);
+        background:rgba(239,68,68,.05);
+    }
+    .sb-user-name{
+        font-weight:700;font-size:15px;color:var(--txt);
+        background:linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+        -webkit-background-clip:text;
+        -webkit-text-fill-color:transparent;
+        background-clip:text;
+    }
+    .sb-user-role{font-size:12px;color:var(--muted);margin-top:4px;}
+    
+    .sb-nav{list-style:none !important;padding:12px 0;}
+    .sb-nav li{list-style:none !important;}
+    
+    .sb-link {
+        display:flex;align-items:center;gap:12px;
+        padding:12px 18px;color:var(--muted);text-decoration:none;
+        border-left:3px solid transparent;
+        transition:all .25s;font-size:13.5px;cursor:pointer;
+        margin:2px 8px;border-radius:0 var(--radius) var(--radius) 0;
+    }
+    
+    .sb-link:hover {
+        background:var(--hover);color:var(--accent);
+        border-left-color:var(--accent);text-decoration:none;
+        transform:translateX(4px);
+    }
+    
+    .sb-link.active {
+        background:rgba(239,68,68,.15);color:var(--accent);
+        border-left-color:var(--accent);font-weight:600;
+    }
+    
+    .sb-link i{width:18px;text-align:center;flex-shrink:0;font-size:15px;}
+    .sb-link .sb-arrow{margin-left:auto;font-size:11px;transition:transform .25s;}
+    .sb-link.open .sb-arrow{transform:rotate(90deg);}
+    
+    .sb-sub {
+        list-style:none !important;overflow:hidden;
+        max-height:0;transition:max-height .3s ease;
+        background:rgba(0,0,0,.2);
+    }
+    .sb-sub.expanded{max-height:1000px;}
+    .sb-sub li{list-style:none !important;}
+    .sb-sub .sb-link{padding-left:54px;font-size:12.5px;border-left:3px solid transparent;}
+    
+    .sb-label {
+        font-size:10px;font-weight:800;letter-spacing:1.8px;
+        color:var(--accent);padding:16px 20px 6px;text-transform:uppercase;
+        opacity:.8;
+    }
+    
+    .sb-divider{height:1px;background:var(--border);margin:8px 16px;opacity:.5;}
+
+    /* Responsive 2-column grids used across pages */
+    .grid-2-1{display:grid;grid-template-columns:2fr 1fr;gap:16px;}
+    .grid-1-1{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    @media (max-width:900px){
+        .grid-2-1,.grid-1-1{grid-template-columns:1fr;}
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+        background:none;border:none;cursor:pointer;
+        color:#fff;font-size:18px;padding:8px;
+        border-radius:8px;transition:all .2s;
+        display:flex;align-items:center;justify-content:center;
+        opacity:.9;
+    }
+    .theme-toggle:hover{background:rgba(255,255,255,.15);opacity:1;}
+
+    /* Avatar + Dropdown */
+    .avatar-wrap{position:relative;}
+    .avatar-btn{
+        width:38px;height:38px;border-radius:50%;
+        background:rgba(255,255,255,.18);
+        color:#fff;font-weight:700;font-size:14px;
+        display:flex;align-items:center;justify-content:center;
+        cursor:pointer;border:2px solid rgba(255,255,255,.55);transition:all .2s;
+    }
+    .avatar-btn:hover{transform:scale(1.05);background:rgba(255,255,255,.28);}
+
+    .avatar-dropdown{
+        position:absolute;top:calc(100% + 12px);right:0;
+        width:230px;background:var(--card);
+        border:1px solid var(--border);border-radius:var(--radius);
+        box-shadow:0 15px 40px rgba(0,0,0,.4);
+        opacity:0;visibility:hidden;transform:translateY(-8px);
+        transition:all .2s ease;z-index:1100;overflow:hidden;
+    }
+    .avatar-dropdown.open{opacity:1;visibility:visible;transform:translateY(0);}
+
+    .ad-header{
+        padding:16px 18px;border-bottom:1px solid var(--border);
+        background:rgba(239,68,68,.06);
+    }
+    .ad-header .name{font-weight:700;font-size:14px;color:var(--txt);}
+    .ad-header .role{font-size:12px;color:var(--muted);margin-top:2px;}
+
+    .ad-item{
+        display:flex;align-items:center;gap:10px;
+        padding:12px 18px;color:var(--muted);text-decoration:none;
+        font-size:13.5px;transition:all .18s;cursor:pointer;
+    }
+    .ad-item:hover{background:var(--hover);color:var(--accent);text-decoration:none;}
+    .ad-item i{width:16px;text-align:center;font-size:14px;}
+    .ad-divider{height:1px;background:var(--border);margin:4px 0;opacity:.6;}
+    .ad-item.logout{color:var(--danger);}
+    .ad-item.logout:hover{background:rgba(220,38,38,.1);color:var(--danger);}
+
+    /* Light Mode Overrides */
+    html[data-theme="light"] {
+        --bg:      #f3f4f6;
+        --card:    #ffffff;
+        --hover:   #f1f5f9;
+        --border:  #e2e8f0;
+        --txt:     #1a202c;
+        --muted:   #64748b;
+    }
+    html[data-theme="light"] body{background:linear-gradient(135deg, var(--bg) 0%, #eef1f5 100%);}
+    html[data-theme="light"] .sb-sub{background:rgba(0,0,0,.03);}
+    
+    /* Page Wrapper */
+    .page-wrap {
+        margin-left:var(--sb-w);
+        padding:calc(var(--nav-h) + 32px) 32px 32px;
+        min-height:100vh;transition:margin-left .28s;
+    }
+    
+    .sb-overlay {
+        display:none;position:fixed;inset:0;z-index:1039;
+        background:rgba(0,0,0,.6);
+        backdrop-filter:blur(4px);
+    }
+    
+    /* Flash Messages */
+    .flash-bar{margin-bottom:20px;}
+    .flash-bar .alert {
+        display:flex;align-items:center;gap:12px;
+        border-radius:var(--radius);padding:14px 18px;font-size:13.5px;
+        animation:slideIn .3s ease;
+        box-shadow:0 4px 12px rgba(0,0,0,.2);
+    }
+    
+    @keyframes slideIn {
+        from{transform:translateY(-20px);opacity:0;}
+        to{transform:translateY(0);opacity:1;}
+    }
+    
+    .close-btn {
+        margin-left:auto;background:none;border:none;
+        font-size:18px;cursor:pointer;color:inherit;opacity:.7;
+        line-height:1;padding:0 4px;transition:opacity .2s;
+    }
+    .close-btn:hover{opacity:1;}
+    
+    /* Responsive */
+    @media(max-width:991px){
+        .hamburger{display:flex;}
+        .sidebar{transform:translateX(-100%);}
+        .sidebar.open{transform:translateX(0);}
+        .sb-overlay.open{display:block;}
+        .page-wrap{margin-left:0;padding:calc(var(--nav-h) + 20px) 16px 20px;}
+    }
+    
+    @media(max-width:575px){
+        .topbar-user .u-details{display:none;}
+        .page-wrap{padding:calc(var(--nav-h) + 14px) 10px 14px;}
+        .topbar-brand{font-size:16px;}
+        .topbar{padding:0 12px;}
+    }
+    
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar{width:8px;height:8px;}
+    ::-webkit-scrollbar-track{background:transparent;}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+    ::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+    </style>
+    {% set _theme = (panel_settings.theme if panel_settings and panel_settings.theme else 'default') %}
+    <style>
+    /* ── Panel Theme: {{ _theme }} ─────────────────────────────────────── */
+
+    /* Shared hook: nearly every card/panel across the whole panel starts its
+       inline style with "background:var(--card)…", so this selector lets a
+       single theme block re-skin the entire app consistently, not just the
+       dashboard hero cards. Section headers (the small uppercase h6 labels
+       like "QUICK LINKS") are targeted the same way. */
+
+    {% if _theme == 'midnight' %}
+    :root {
+        --bg: #05070f; --card:#0b0f1c; --hover:#151b2e; --border:#232b42;
+        --txt:#eef1ff; --muted:#8892b0; --accent:#8b5cf6; --accent-light:#22d3ee;
+        --accent2:#06b6d4; --topbar-grad-1:#312e81; --topbar-grad-2:#0891b2;
+        --radius:4px;
+    }
+    /* Sharp, flat, "console" feel — square corners, no soft shadows, a thin
+       glowing accent line instead. */
+    .hero-card,.stat-box,.test-hero{border-radius:4px !important;}
+    [style*="background:var(--card)"]{
+        border-radius:4px !important;
+        box-shadow:none !important;
+        border-left:3px solid var(--accent) !important;
+    }
+    [style*="text-transform:uppercase"]{letter-spacing:1.6px !important;}
+    .sb-link.active{background:rgba(139,92,246,.14) !important; border-left-color:var(--accent) !important;}
+    a, button, .btn-add, .quick-link{border-radius:4px !important;}
+
+    {% elif _theme == 'sunset' %}
+    :root {
+        --bg:#1a1210; --card:#211714; --hover:#2c1e19; --border:#40291f;
+        --txt:#fdf3ee; --muted:#c9a793; --accent:#f97316; --accent-light:#ec4899;
+        --accent2:#fb923c; --topbar-grad-1:#c2410c; --topbar-grad-2:#db2777;
+        --radius:20px;
+    }
+    /* Warm, soft, glowing — very rounded corners and a gentle amber glow
+       under every panel instead of a hard shadow. */
+    .hero-card,.stat-box,.test-hero{border-radius:20px !important;}
+    [style*="background:var(--card)"]{
+        border-radius:20px !important;
+        box-shadow:0 10px 26px rgba(249,115,22,.16) !important;
+        border-color:rgba(249,115,22,.18) !important;
+    }
+    a, button, .btn-add, .quick-link{border-radius:20px !important;}
+
+    {% elif _theme == 'emerald' %}
+    :root {
+        --bg:#0b1512; --card:#0f1e19; --hover:#16281f; --border:#20372c;
+        --txt:#ecfdf5; --muted:#86ac9c; --accent:#10b981; --accent-light:#34d399;
+        --accent2:#059669; --topbar-grad-1:#065f46; --topbar-grad-2:#0d9488;
+        --radius:8px;
+    }
+    /* Calm & minimal — flat panels, no shadows at all, a slim accent bar on
+       top of each card instead of a colored side/glow. */
+    .hero-card,.stat-box,.test-hero{border-radius:8px !important; box-shadow:none !important;}
+    [style*="background:var(--card)"]{
+        border-radius:8px !important;
+        box-shadow:none !important;
+        border-top:3px solid var(--accent) !important;
+    }
+    [style*="text-transform:uppercase"]{font-weight:800 !important;}
+    a, button, .btn-add, .quick-link{border-radius:6px !important;}
+
+    {% elif _theme == 'crimson' %}
+    :root {
+        --bg:#120707; --card:#1a0a0a; --hover:#241010; --border:#3a1616;
+        --txt:#fef2f2; --muted:#c39494; --accent:#dc2626; --accent-light:#f59e0b;
+        --accent2:#ef4444; --topbar-grad-1:#7f1d1d; --topbar-grad-2:#b45309;
+        --radius:4px;
+    }
+    /* Bold & dramatic — sharp corners, heavy red-tinted shadow, thicker
+       borders, extra-bold section headers. */
+    .hero-card,.stat-box,.test-hero{border-radius:4px !important;}
+    [style*="background:var(--card)"]{
+        border-radius:4px !important;
+        box-shadow:0 14px 30px rgba(220,38,38,.20) !important;
+        border-width:1.5px !important;
+    }
+    [style*="text-transform:uppercase"]{font-weight:900 !important; letter-spacing:1.4px !important;}
+    a, button, .btn-add, .quick-link{border-radius:4px !important;}
+
+    {% elif _theme == 'light' %}
+    :root {
+        --bg:#f3f4f6; --card:#ffffff; --hover:#eef0f4; --border:#dfe3ea;
+        --txt:#101828; --muted:#5b6473; --accent:#4338ca; --accent-light:#0ea5e9;
+        --accent2:#0284c7; --topbar-grad-1:#4338ca; --topbar-grad-2:#0ea5e9;
+        --radius:14px;
+    }
+    /* Clean & corporate — soft daylight shadow, generously rounded, no
+       heavy borders. */
+    .hero-card,.stat-box,.test-hero{border-radius:14px !important; box-shadow:0 4px 14px rgba(16,24,40,.08) !important;}
+    [style*="background:var(--card)"]{
+        border-radius:14px !important;
+        box-shadow:0 2px 12px rgba(16,24,40,.06) !important;
+        border-color:#e6e8ee !important;
+    }
+    {% endif %}
+    </style>
+    {% if panel_settings and _theme == 'default' and (panel_settings.primary_color or panel_settings.secondary_color) %}
+    <!-- Custom branding colors only override the accent palette on the Default theme.
+         Other themes (Midnight, Sunset, Emerald, Crimson, Daylight) keep their own
+         distinct accent colors so every theme actually looks different. -->
+    <style>
+    :root {
+        {% if panel_settings.primary_color %}--accent: {{ panel_settings.primary_color }};{% endif %}
+        {% if panel_settings.secondary_color %}--accent-light: {{ panel_settings.secondary_color }};{% endif %}
+        --topbar-grad-1: {{ panel_settings.primary_color or '#4338ca' }};
+        --topbar-grad-2: {{ panel_settings.secondary_color or '#0ea5e9' }};
+    }
+    </style>
+    {% endif %}
+</head>
+<body>
+
+<!-- Top Navigation -->
+<div class="topbar">
+    <button class="hamburger" onclick="toggleSidebar()" aria-label="menu">
+        <i class="fa fa-bars"></i>
+    </button>
+    <a class="topbar-brand" href="{{ url_for('main.dashboard') }}">
+        {% if panel_settings and panel_settings.logo_filename %}
+            <img src="{{ logo_url(panel_settings.logo_filename) }}" alt="logo" style="height:26px;vertical-align:middle;margin-right:6px;">
+        {% else %}
+            <i class="fa fa-rocket"></i>
+        {% endif %}
+        {{ panel_settings.panel_name if panel_settings and panel_settings.panel_name else 'FLASH SMS' }}
+    </a>
+    <div class="topbar-spacer"></div>
+
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
+        <i class="fa fa-moon-o" id="themeIcon"></i>
+    </button>
+
+    <div class="avatar-wrap">
+        <button class="avatar-btn" onclick="toggleAvatarMenu()">
+            {{ current_user.username[0]|upper if current_user.username else 'U' }}
+        </button>
+        <div class="avatar-dropdown" id="avatarDropdown">
+            <div class="ad-header">
+                <div class="name">{{ current_user.username }}</div>
+                <div class="role">{{ current_user.role.display_name if current_user.role else 'User' }}</div>
+            </div>
+            <a class="ad-item" href="{{ url_for('main.profile') }}"><i class="fa fa-user-o"></i> Profile</a>
+            {% if not current_user.is_test_account() %}
+            <a class="ad-item" href="{{ url_for('main.my_activity') }}"><i class="fa fa-line-chart"></i> My Activity</a>
+            {% endif %}
+            {% if current_user.role and current_user.role.name == 'admin' %}
+            <a class="ad-item" href="{{ url_for('admin.activity_logs') }}"><i class="fa fa-users"></i> Users Activity</a>
+            {% endif %}
+            <a class="ad-item" href="{{ url_for('main.notifications') }}"><i class="fa fa-bell-o"></i> Notifications</a>
+            <div class="ad-divider"></div>
+            <form method="POST" action="{{ url_for('auth.logout') }}" style="margin:0;">
+                <button type="submit" class="ad-item logout" style="width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:10px 16px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--danger);">
+                    <i class="fa fa-sign-out"></i> Sign Out
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleAvatarMenu(){
+        document.getElementById('avatarDropdown').classList.toggle('open');
+    }
+    document.addEventListener('click', function(e){
+        const wrap = document.querySelector('.avatar-wrap');
+        if (wrap && !wrap.contains(e.target)) {
+            document.getElementById('avatarDropdown').classList.remove('open');
+        }
+    });
+
+    function applyTheme(theme){
+        document.documentElement.setAttribute('data-theme', theme);
+        const icon = document.getElementById('themeIcon');
+        if (icon) icon.className = theme === 'light' ? 'fa fa-moon-o' : 'fa fa-sun-o';
+    }
+    function toggleTheme(){
+        const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        localStorage.setItem('flash_theme', current);
+        applyTheme(current);
+    }
+    (function(){
+        const saved = localStorage.getItem('flash_theme') || 'dark';
+        applyTheme(saved);
+    })();
+</script>
+
+<!-- Overlay for Mobile -->
+<div class="sb-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
+
+<!-- Sidebar Navigation -->
+<nav class="sidebar" id="sidebar">
+    <div class="sb-user">
+        <div class="sb-user-name">{{ current_user.username }}</div>
+        <div class="sb-user-role">{{ current_user.role.display_name if current_user.role else 'User' }}</div>
+    </div>
+
+    <ul class="sb-nav">
+
+        <li>
+            <a href="{{ url_for('main.dashboard') }}"
+               class="sb-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+                <i class="fa fa-th-large"></i> Dashboard
+            </a>
+        </li>
+
+        {% if current_user.is_test_account() %}
+        <div class="sb-divider"></div>
+        <div class="sb-label">Test Account</div>
+        <li>
+            <a href="{{ url_for('admin.agent_my_numbers') }}"
+               class="sb-link {% if request.endpoint == 'admin.agent_my_numbers' %}active{% endif %}">
+                <i class="fa fa-list-ol"></i> Test Numbers
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('main.sms_cdr_reports') }}"
+               class="sb-link {% if request.endpoint == 'main.sms_cdr_reports' %}active{% endif %}">
+                <i class="fa fa-bar-chart"></i> Statistics
+            </a>
+        </li>
+        {% elif current_user.is_agent() or current_user.is_admin() %}
+        <div class="sb-divider"></div>
+        <div class="sb-label">Agent</div>
+        <li>
+            <a href="{{ url_for('admin.agent_add_numbers') }}"
+               class="sb-link {% if request.endpoint == 'admin.agent_add_numbers' %}active{% endif %}">
+                <i class="fa fa-plus-circle"></i> Add Numbers
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin.agent_my_numbers') }}"
+               class="sb-link {% if request.endpoint == 'admin.agent_my_numbers' %}active{% endif %}">
+                <i class="fa fa-list-ol"></i> My Numbers
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin.agent_create_client') }}"
+               class="sb-link {% if request.endpoint == 'admin.agent_create_client' %}active{% endif %}">
+                <i class="fa fa-user-plus"></i> Add Client
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin.agent_clients') }}"
+               class="sb-link {% if request.endpoint == 'admin.agent_clients' %}active{% endif %}">
+                <i class="fa fa-users"></i> My Clients
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin.agent_client_stats') }}"
+               class="sb-link {% if request.endpoint == 'admin.agent_client_stats' %}active{% endif %}">
+                <i class="fa fa-bar-chart"></i> Client Statistics
+            </a>
+        </li>
+        {% endif %}
+
+        {% if current_user.is_client() %}
+        <div class="sb-divider"></div>
+        <div class="sb-label">My Account</div>
+        <li>
+            <a href="{{ url_for('main.client_my_numbers') }}"
+               class="sb-link {% if request.endpoint == 'main.client_my_numbers' %}active{% endif %}">
+                <i class="fa fa-list-ol"></i> My Numbers
+            </a>
+        </li>
+        {% endif %}
+
+        {% if not current_user.is_test_account() %}
+        <div class="sb-divider"></div>
+        <div class="sb-label">Reports</div>
+        <li>
+            <a href="{{ url_for('main.sms_cdr_reports') }}"
+               class="sb-link {% if request.endpoint == 'main.sms_cdr_reports' %}active{% endif %}">
+                <i class="fa fa-file-text-o"></i> CDR Reports
+            </a>
+        </li>
+        {% if not current_user.is_client() %}
+        <li>
+            <a href="{{ url_for('main.cr_api') }}"
+               class="sb-link {% if request.endpoint == 'main.cr_api' %}active{% endif %}">
+                <i class="fa fa-code"></i> CR API
+            </a>
+        </li>
+        {% endif %}
+        {% endif %}
+        <li>
+            <a href="{{ url_for('main.notifications') }}"
+               class="sb-link {% if request.endpoint == 'main.notifications' %}active{% endif %}">
+                <i class="fa fa-bell"></i> Notifications
+            </a>
+        </li>
+
+        <div class="sb-divider"></div>
+        <div class="sb-label">Account</div>
+        <li>
+            <a href="{{ url_for('main.profile') }}"
+               class="sb-link {% if request.endpoint == 'main.profile' %}active{% endif %}">
+                <i class="fa fa-cog"></i> Settings
+            </a>
+        </li>
+        {% if not current_user.is_test_account() %}
+        <li>
+            <a href="{{ url_for('main.my_activity') }}"
+               class="sb-link {% if request.endpoint == 'main.my_activity' %}active{% endif %}">
+                <i class="fa fa-history"></i> Activity
+            </a>
+        </li>
+        {% endif %}
+
+        {% if current_user.is_admin() %}
+        <div class="sb-divider"></div>
+        <div class="sb-label" style="color:var(--accent);">Admin Panel</div>
+        <li>
+            <span class="sb-link {% if request.endpoint and request.endpoint.startswith('admin.') %}open{% endif %}"
+                  style="color:var(--accent);"
+                  onclick="toggleAccordion(this,'sub-admin')">
+                <i class="fa fa-shield"></i> Admin
+                <i class="fa fa-chevron-right sb-arrow"></i>
+            </span>
+            <ul class="sb-sub {% if request.endpoint and request.endpoint.startswith('admin.') %}expanded{% endif %}"
+                id="sub-admin">
+                <li>
+                    <a href="{{ url_for('admin.index') }}"
+                       class="sb-link {% if request.endpoint == 'admin.index' %}active{% endif %}">
+                        <i class="fa fa-dashboard"></i> Overview
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.branding_settings') }}"
+                       class="sb-link {% if request.endpoint == 'admin.branding_settings' %}active{% endif %}">
+                        <i class="fa fa-paint-brush"></i> Branding
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.themes_settings') }}"
+                       class="sb-link {% if request.endpoint == 'admin.themes_settings' %}active{% endif %}">
+                        <i class="fa fa-magic"></i> Themes
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.users') }}"
+                       class="sb-link {% if request.endpoint == 'admin.users' %}active{% endif %}">
+                        <i class="fa fa-users"></i> Users
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.sms_ranges') }}"
+                       class="sb-link {% if request.endpoint == 'admin.sms_ranges' %}active{% endif %}">
+                        <i class="fa fa-flag"></i> Ranges
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.sms_numbers') }}"
+                       class="sb-link {% if request.endpoint == 'admin.sms_numbers' %}active{% endif %}">
+                        <i class="fa fa-phone"></i> All Numbers
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.agent_limits') }}"
+                       class="sb-link {% if request.endpoint == 'admin.agent_limits' %}active{% endif %}">
+                        <i class="fa fa-sliders"></i> Range Limits
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.add_numbers_to_agent') }}"
+                       class="sb-link {% if request.endpoint == 'admin.add_numbers_to_agent' %}active{% endif %}">
+                        <i class="fa fa-plus-circle"></i> Add to Agent
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.agent_otp_stats') }}"
+                       class="sb-link {% if request.endpoint == 'admin.agent_otp_stats' %}active{% endif %}">
+                        <i class="fa fa-bar-chart"></i> Agent OTP Stats
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.test_account_settings') }}"
+                       class="sb-link {% if request.endpoint == 'admin.test_account_settings' %}active{% endif %}">
+                        <i class="fa fa-flask"></i> Test Account
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.sms_cdr') }}"
+                       class="sb-link {% if request.endpoint == 'admin.sms_cdr' %}active{% endif %}">
+                        <i class="fa fa-file-text"></i> CDR
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.activity_logs') }}"
+                       class="sb-link {% if request.endpoint == 'admin.activity_logs' %}active{% endif %}">
+                        <i class="fa fa-history"></i> Logs
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.news') }}"
+                       class="sb-link {% if request.endpoint == 'admin.news' %}active{% endif %}">
+                        <i class="fa fa-newspaper-o"></i> News
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.backup') }}"
+                       class="sb-link {% if request.endpoint and request.endpoint.startswith('admin.backup') %}active{% endif %}">
+                        <i class="fa fa-database"></i> Backup &amp; Restore
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('monitor.index') }}"
+                       class="sb-link {% if request.endpoint == 'monitor.index' %}active{% endif %}">
+                        <i class="fa fa-rss"></i> SMS Monitor
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('provider.providers') }}"
+                       class="sb-link {% if request.endpoint == 'provider.providers' %}active{% endif %}">
+                        <i class="fa fa-plug"></i> Providers
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('provider.otp_logs') }}"
+                       class="sb-link {% if request.endpoint == 'provider.otp_logs' %}active{% endif %}">
+                        <i class="fa fa-key"></i> OTP Logs
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('main.admin_api_manage') }}"
+                       class="sb-link {% if request.endpoint == 'main.admin_api_manage' %}active{% endif %}">
+                        <i class="fa fa-code"></i> API Manage
+                    </a>
+                </li>
+            </ul>
+        </li>
+        {% endif %}
+
+        {% if current_user.is_developer() or current_user.is_admin() %}
+        <div class="sb-divider"></div>
+        <div class="sb-label">Developer</div>
+        <li>
+            <span class="sb-link {% if request.endpoint and request.endpoint.startswith('dev.') %}open{% endif %}"
+                  onclick="toggleAccordion(this,'sub-dev')">
+                <i class="fa fa-code"></i> Dev Tools
+                <i class="fa fa-chevron-right sb-arrow"></i>
+            </span>
+            <ul class="sb-sub {% if request.endpoint and request.endpoint.startswith('dev.') %}expanded{% endif %}"
+                id="sub-dev">
+                <li><a href="{{ url_for('dev.index') }}" class="sb-link"><i class="fa fa-th"></i> All Assets</a></li>
+                <li><a href="{{ url_for('dev.pages_list') }}" class="sb-link"><i class="fa fa-file-code-o"></i> HTML Pages</a></li>
+            </ul>
+        </li>
+        {% endif %}
+
+    </ul>
+</nav>
+
+<!-- Main Content -->
+<div class="page-wrap" id="pageWrap">
+    {% if session.get('impersonator_admin_id') %}
+    <div style="background:#f59e0b;color:#1a1a1a;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:13px;font-weight:700;">
+        <span><i class="fa fa-eye"></i> You are viewing the panel as {{ current_user.username }} (impersonation)</span>
+        <form method="POST" action="{{ url_for('admin.test_account_return_to_admin') }}" style="margin:0;">
+            <button type="submit" style="background:#1a1a1a;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:700;">
+                <i class="fa fa-arrow-left"></i> Return to Admin
+            </button>
+        </form>
+    </div>
+    {% endif %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-bar">
+        {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">
+            <i class="fa {% if cat == 'success' %}fa-check-circle{% elif cat == 'danger' %}fa-times-circle{% else %}fa-info-circle{% endif %}"></i>
+            {{ msg }}
+            <button class="close-btn" onclick="this.parentElement.remove()">×</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+
+{% if session.pop('play_welcome_voice', False) %}
+<script>
+(function(){
+    if (!('speechSynthesis' in window)) return;
+    function speakWelcome(){
+        var utter = new SpeechSynthesisUtterance('Welcome to Flash SMS panel');
+        utter.lang = 'en-US';
+        utter.rate = 1;
+        utter.pitch = 1.1;
+        var voices = window.speechSynthesis.getVoices();
+        var enVoices = voices.filter(function(v){ return v.lang && v.lang.toLowerCase().indexOf('en') === 0; });
+        var femaleHints = ['female','samantha','zira','victoria','susan','karen','moira','tessa','fiona','google us english'];
+        var femaleVoice = enVoices.find(function(v){
+            var n = v.name.toLowerCase();
+            return femaleHints.some(function(h){ return n.indexOf(h) !== -1; });
+        });
+        utter.voice = femaleVoice || enVoices[0] || voices[0];
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utter);
+    }
+    if (window.speechSynthesis.getVoices().length) {
+        speakWelcome();
+    } else {
+        window.speechSynthesis.onvoiceschanged = speakWelcome;
+    }
+})();
+</script>
+{% endif %}
+
+<script>
+function toggleSidebar() {
+    var sb = document.getElementById('sidebar');
+    var ov = document.getElementById('sbOverlay');
+    sb.classList.toggle('open');
+    ov.classList.toggle('open');
+}
+
+function toggleAccordion(trigger, subId) {
+    var sub = document.getElementById(subId);
+    if (!sub) return;
+    var isOpen = sub.classList.contains('expanded');
+    document.querySelectorAll('.sb-sub.expanded').forEach(function(el) {
+        if (el !== sub) {
+            el.classList.remove('expanded');
+            var t = el.previousElementSibling;
+            if (t) t.classList.remove('open');
+        }
+    });
+    sub.classList.toggle('expanded', !isOpen);
+    trigger.classList.toggle('open', !isOpen);
+}
+
+// Auto-hide flash messages
+setTimeout(function() {
+    document.querySelectorAll('.flash-bar .alert').forEach(function(el) {
+        el.style.transition = 'opacity .5s';
+        el.style.opacity = '0';
+        setTimeout(function() { el.remove(); }, 500);
+    });
+}, 6000);
+</script>
+</body>
+</html>

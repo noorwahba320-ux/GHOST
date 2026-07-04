@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}CR API — FLASH SMS{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-code"></i> API Credentials</h4>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:22px; margin-bottom:20px;">
+    <div style="font-size:12px; color:var(--muted); font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;">Your API Token</div>
+    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:18px;">
+        <code id="apiToken" style="background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--accent); word-break:break-all; flex:1; min-width:220px;">{{ current_user.api_token }}</code>
+        <button onclick="copyToken()" type="button" style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:8px; padding:10px 14px; font-size:13px; cursor:pointer; white-space:nowrap;">
+            <i class="fa fa-copy"></i> Copy
+        </button>
+        <form method="POST" action="{{ url_for('main.cr_api_regenerate') }}" onsubmit="return confirm('Generate a new token? Your old token will stop working immediately.');">
+            <button type="submit" style="background:rgba(220,38,38,.12); border:1px solid var(--danger); color:var(--danger); border-radius:8px; padding:10px 14px; font-size:13px; cursor:pointer; white-space:nowrap;">
+                <i class="fa fa-refresh"></i> Regenerate
+            </button>
+        </form>
+    </div>
+
+    <div style="font-size:12px; color:var(--muted); font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;">API Base URL</div>
+    <code style="display:block; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--txt); word-break:break-all;">{{ base_url }}</code>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:22px;">
+    <h6 style="font-size:14px; font-weight:800; color:var(--txt); margin-bottom:18px;">API Playground</h6>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-bottom:16px;">
+        <div>
+            <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:6px;">Date Start</label>
+            <input id="pgDateStart" type="text" placeholder="YYYY-MM-DD HH:ii:SS" style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:8px; padding:10px 12px; font-size:13px;">
+        </div>
+        <div>
+            <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:6px;">Date End</label>
+            <input id="pgDateEnd" type="text" placeholder="YYYY-MM-DD HH:ii:SS" style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:8px; padding:10px 12px; font-size:13px;">
+        </div>
+        <div>
+            <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:6px;">Filter Number</label>
+            <input id="pgNumber" type="text" placeholder="Number to search" style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:8px; padding:10px 12px; font-size:13px;">
+        </div>
+        <div>
+            <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:6px;">Filter CLI</label>
+            <input id="pgCli" type="text" placeholder="CLI / Sender" style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:8px; padding:10px 12px; font-size:13px;">
+        </div>
+        <div>
+            <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:6px;">Records to show</label>
+            <input id="pgRecords" type="number" value="10" min="1" max="500" style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:8px; padding:10px 12px; font-size:13px;">
+        </div>
+    </div>
+
+    <button onclick="runPreview()" type="button" style="background:linear-gradient(135deg,#4338ca,#0ea5e9); border:none; color:#fff; font-weight:700; border-radius:8px; padding:11px 22px; font-size:14px; cursor:pointer;">
+        <i class="fa fa-play"></i> Preview
+    </button>
+
+    <div style="margin-top:24px;">
+        <h6 style="font-size:14px; font-weight:800; color:var(--txt); margin-bottom:10px;">Result</h6>
+        <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">Final Request URL</div>
+        <code id="pgUrl" style="display:block; background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:12px; color:var(--txt); word-break:break-all; margin-bottom:16px;">—</code>
+
+        <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">Response</div>
+        <pre id="pgResult" style="background:#0a0e1f; border:1px solid var(--border); border-radius:8px; padding:16px; font-size:12.5px; color:#c9d1f5; max-height:480px; overflow:auto; white-space:pre-wrap; word-break:break-word;">Run a preview to see results here.</pre>
+    </div>
+</div>
+
+<script>
+function copyToken() {
+    var text = document.getElementById('apiToken').innerText.trim();
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(function () {
+            showCopySuccess();
+        }).catch(function () { legacyCopy(text); });
+    } else {
+        legacyCopy(text);
+    }
+}
+function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); showCopySuccess(); }
+    catch(e) { alert('Copy failed. Please copy manually: ' + text); }
+    document.body.removeChild(ta);
+}
+function showCopySuccess() {
+    var btn = document.querySelector('button[onclick="copyToken()"]');
+    if (btn) {
+        var orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fa fa-check"></i> Copied!';
+        btn.style.color = '#10b981';
+        setTimeout(function(){ btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+    }
+}
+
+function runPreview() {
+    var base = {{ base_url|tojson }};
+    var token = {{ current_user.api_token|tojson }};
+    var params = new URLSearchParams();
+    var ds = document.getElementById('pgDateStart').value.trim();
+    var de = document.getElementById('pgDateEnd').value.trim();
+    var num = document.getElementById('pgNumber').value.trim();
+    var cli = document.getElementById('pgCli').value.trim();
+    var records = document.getElementById('pgRecords').value || 10;
+
+    if (ds) params.set('date_start', ds);
+    if (de) params.set('date_end', de);
+    if (num) params.set('number', num);
+    if (cli) params.set('cli', cli);
+    params.set('records', records);
+    params.set('api_token', token);
+
+    var url = base + '?' + params.toString();
+    document.getElementById('pgUrl').innerText = url;
+    document.getElementById('pgResult').innerText = 'Loading...';
+
+    fetch(url, { headers: { 'X-API-Token': token } })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            document.getElementById('pgResult').innerText = JSON.stringify(data, null, 2);
+        })
+        .catch(function (err) {
+            document.getElementById('pgResult').innerText = 'Request failed: ' + err;
+        });
+}
+</script>
+{% endblock %}

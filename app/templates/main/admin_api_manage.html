@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}API Management — FLASH SMS{% endblock %}
+{% block content %}
+<div style="margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <h4 style="margin:0;color:var(--accent);"><i class="fa fa-key"></i> API Management</h4>
+    <span style="color:var(--muted);font-size:13px;">Manage API tokens for all users</span>
+</div>
+
+<div style="margin-bottom:14px;">
+    <input type="text" id="apiUserSearch" onkeyup="filterApiUsers()" placeholder="Search by username..."
+           style="width:100%;max-width:320px;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--txt);font-size:13px;">
+</div>
+
+<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;color:var(--muted);">
+        <strong style="color:var(--txt);">Base API URL:</strong>
+        <code style="background:var(--hover);padding:3px 8px;border-radius:6px;color:var(--accent);font-size:12px;word-break:break-all;">{{ base_url }}</code>
+    </div>
+    <table style="width:100%;border-collapse:collapse;" id="apiUsersTable">
+        <thead>
+            <tr style="background:var(--hover);">
+                <th style="padding:12px 16px;text-align:left;font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Username</th>
+                <th style="padding:12px 16px;text-align:left;font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Role</th>
+                <th style="padding:12px 16px;text-align:left;font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">API Token</th>
+                <th style="padding:12px 16px;text-align:center;font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+            <tr class="api-user-row" data-username="{{ u.username|lower }}" style="border-top:1px solid var(--border);transition:background .15s;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+                <td style="padding:13px 16px;font-weight:700;color:var(--txt);">{{ u.username }}</td>
+                <td style="padding:13px 16px;">
+                    <span style="background:rgba(79,70,229,.15);color:var(--accent);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">
+                        {{ u.role.name if u.role else 'user' }}
+                    </span>
+                </td>
+                <td style="padding:13px 16px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <code id="tok-{{ u.id }}" style="background:var(--hover);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11.5px;color:var(--accent);word-break:break-all;flex:1;min-width:0;">{{ u.api_token or '—' }}</code>
+                        <button onclick="copyTok('tok-{{ u.id }}')" style="background:var(--hover);border:1px solid var(--border);color:var(--txt);border-radius:7px;padding:6px 11px;font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+                            <i class="fa fa-copy"></i>
+                        </button>
+                    </div>
+                </td>
+                <td style="padding:13px 16px;text-align:center;">
+                    <form method="POST" action="{{ url_for('main.admin_api_regenerate', user_id=u.id) }}"
+                          onsubmit="return confirm('Regenerate token for {{ u.username }}? Old token stops working immediately.');">
+                        <button type="submit" style="background:rgba(220,38,38,.1);border:1px solid var(--danger);color:var(--danger);border-radius:7px;padding:6px 13px;font-size:12px;cursor:pointer;">
+                            <i class="fa fa-refresh"></i> Regen
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="4" style="padding:24px;text-align:center;color:var(--muted);">No users found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function filterApiUsers() {
+    var q = document.getElementById('apiUserSearch').value.trim().toLowerCase();
+    document.querySelectorAll('#apiUsersTable .api-user-row').forEach(function(row) {
+        row.style.display = row.getAttribute('data-username').indexOf(q) !== -1 ? '' : 'none';
+    });
+}
+function copyTok(id) {
+    var text = document.getElementById(id).innerText.trim();
+    function done() {
+        var btn = document.querySelector('button[onclick="copyTok(\''+id+'\')"]');
+        if (btn) { var o=btn.innerHTML; btn.innerHTML='<i class="fa fa-check"></i>'; setTimeout(function(){btn.innerHTML=o;},1800); }
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done).catch(function(){legacyCopy(text,done);});
+    } else { legacyCopy(text,done); }
+}
+function legacyCopy(t,cb){
+    var ta=document.createElement('textarea');
+    ta.value=t; ta.style.cssText='position:fixed;opacity:0;top:0;left:0;';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try{document.execCommand('copy');if(cb)cb();}catch(e){}
+    document.body.removeChild(ta);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}SMS Numbers — Admin{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-phone"></i> SMS Numbers</h4>
+</div>
+
+<!-- Filter -->
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:16px;">
+    <form method="GET" id="filterForm" style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">AGENT</label>
+            <select name="agent" onchange="document.getElementById('filterForm').submit()"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+                <option value="">All Agents</option>
+                <option value="none" {% if request.args.get('agent') == 'none' %}selected{% endif %}>No Agent</option>
+                {% for a in agents %}
+                <option value="{{ a.id }}" {% if request.args.get('agent') == a.id|string %}selected{% endif %}>{{ a.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">SEARCH</label>
+            <input type="text" name="search" value="{{ request.args.get('search', '') }}" placeholder="Number..."
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px; width:160px;">
+        </div>
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">SHOW</label>
+            <select name="per_page" onchange="document.getElementById('filterForm').submit()"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+                {% for n in [50, 100, 500, 1000] %}
+                <option value="{{ n }}" {% if request.args.get('per_page', '50') == n|string %}selected{% endif %}>{{ n }}</option>
+                {% endfor %}
+                <option value="99999" {% if request.args.get('per_page') == '99999' %}selected{% endif %}>All</option>
+            </select>
+        </div>
+        <button type="submit" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:8px 18px; font-size:13px; font-weight:700; cursor:pointer;">
+            <i class="fa fa-filter"></i> Filter
+        </button>
+    </form>
+</div>
+
+<form method="POST" id="adminForm">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+        <div style="padding:12px 16px; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+            <span style="font-size:13px; color:var(--muted);">Selected: <strong id="selectedCount" style="color:var(--accent);">0</strong></span>
+            <div style="flex:1;"></div>
+            <button type="button" onclick="submitAction('{{ url_for('admin.admin_reclaim_numbers') }}')" style="background:var(--warn); color:#000; border:none; border-radius:6px; padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer;">
+                <i class="fa fa-hand-grab-o"></i> Reclaim from Agent
+            </button>
+            <button type="button" onclick="submitAction('{{ url_for('admin.bulk_delete_numbers') }}')" style="background:var(--danger); color:#fff; border:none; border-radius:6px; padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer;">
+                <i class="fa fa-trash"></i> Delete Selected
+            </button>
+            <button type="button" onclick="deleteAllFiltered()" style="background:#8b0000; color:#fff; border:none; border-radius:6px; padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer;">
+                <i class="fa fa-bomb"></i> Delete ALL ({{ numbers.total }} matching filter)
+            </button>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <th style="padding:10px 16px; width:40px;">
+                            <input type="checkbox" id="selectAll" onchange="toggleAll(this)" style="cursor:pointer; width:15px; height:15px;">
+                        </th>
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">Number</th>
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">Range</th>
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">Agent</th>
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">Client</th>
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">Status</th>
+                        <th style="padding:10px 16px; text-align:left; color:var(--muted); font-weight:600;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if numbers.items %}
+                    {% for num in numbers.items %}
+                    <tr style="border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+                        <td style="padding:10px 16px;">
+                            <input type="checkbox" name="number_ids" value="{{ num.id }}" class="numCheck" onchange="updateCount()" style="cursor:pointer; width:15px; height:15px;">
+                        </td>
+                        <td style="padding:10px 16px; font-family:monospace; color:var(--accent);"><strong>{{ num.number }}</strong></td>
+                        <td style="padding:10px 16px; color:var(--muted);">
+                            {% if num.sms_range %}{{ num.sms_range.name if num.sms_range.name else '+' + num.sms_range.prefix + ' — ' + num.sms_range.country }}{% else %}N/A{% endif %}
+                        </td>
+                        <td style="padding:10px 16px;">
+                            {% if num.agent %}<span style="color:var(--warn);">{{ num.agent.username }}</span>
+                            {% else %}<span style="color:var(--muted);">Available</span>{% endif %}
+                        </td>
+                        <td style="padding:10px 16px;">
+                            {% if num.client %}<span style="color:var(--success);">{{ num.client.username }}</span>
+                            {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+                        </td>
+                        <td style="padding:10px 16px;">
+                            {% if num.status == 'activated' %}
+                            <span style="background:rgba(46,213,115,.15); color:var(--success); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;">ACTIVE</span>
+                            {% elif num.status == 'reserved' %}
+                            <span style="background:rgba(255,165,2,.15); color:var(--warn); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;">RESERVED</span>
+                            {% else %}
+                            <span style="background:rgba(136,136,136,.15); color:var(--muted); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;">AVAILABLE</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:10px 16px; display:flex; gap:6px;">
+                            {% if num.agent_id %}
+                            <form method="POST" action="{{ url_for('admin.admin_reclaim_single', number_id=num.id) }}" onsubmit="return confirm('Reclaim this number?')">
+                                <button type="submit" style="background:var(--warn); color:#000; border:none; border-radius:6px; padding:5px 10px; font-size:11px; font-weight:700; cursor:pointer;">
+                                    <i class="fa fa-undo"></i> Reclaim
+                                </button>
+                            </form>
+                            {% endif %}
+                            <form method="POST" action="{{ url_for('admin.delete_number', number_id=num.id) }}" onsubmit="return confirm('Permanently delete this number?')">
+                                <button type="submit" style="background:var(--danger); color:#fff; border:none; border-radius:6px; padding:5px 10px; font-size:11px; cursor:pointer;">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="padding:40px; text-align:center; color:var(--muted);">No numbers found.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if numbers.pages > 1 %}
+        <div style="padding:14px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+            <span style="font-size:13px; color:var(--muted);">Page {{ numbers.page }} of {{ numbers.pages }} — {{ numbers.total }} total</span>
+            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                {% if numbers.has_prev %}
+                <a href="{{ url_for('admin.sms_numbers', page=numbers.prev_num, agent=request.args.get('agent',''), search=request.args.get('search',''), per_page=request.args.get('per_page','50')) }}"
+                   style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">‹ Prev</a>
+                {% endif %}
+                {% for p in range([1, numbers.page-2]|max, [numbers.pages+1, numbers.page+3]|min) %}
+                <a href="{{ url_for('admin.sms_numbers', page=p, agent=request.args.get('agent',''), search=request.args.get('search',''), per_page=request.args.get('per_page','50')) }}"
+                   style="background:{% if p == numbers.page %}var(--accent){% else %}var(--hover){% endif %}; color:{% if p == numbers.page %}#000{% else %}var(--txt){% endif %}; border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">{{ p }}</a>
+                {% endfor %}
+                {% if numbers.has_next %}
+                <a href="{{ url_for('admin.sms_numbers', page=numbers.next_num, agent=request.args.get('agent',''), search=request.args.get('search',''), per_page=request.args.get('per_page','50')) }}"
+                   style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">Next ›</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</form>
+
+<form method="POST" id="deleteAllForm" action="{{ url_for('admin.delete_all_filtered_numbers') }}">
+    <input type="hidden" name="agent" value="{{ request.args.get('agent', '') }}">
+    <input type="hidden" name="search" value="{{ request.args.get('search', '') }}">
+</form>
+
+{% block extra_js %}
+<script>
+function deleteAllFiltered() {
+    var total = {{ numbers.total }};
+    if (total === 0) { alert('No numbers match the current filter.'); return; }
+    if (!confirm('This will PERMANENTLY delete ALL ' + total + ' numbers matching the current filter — not just this page. Continue?')) return;
+    document.getElementById('deleteAllForm').submit();
+}
+function toggleAll(cb) {
+    document.querySelectorAll('.numCheck').forEach(function(el) { el.checked = cb.checked; });
+    updateCount();
+}
+function updateCount() {
+    var count = document.querySelectorAll('.numCheck:checked').length;
+    document.getElementById('selectedCount').textContent = count;
+}
+function submitAction(url) {
+    var ids = [];
+    document.querySelectorAll('.numCheck:checked').forEach(function(el) { ids.push(el.value); });
+    if (ids.length === 0) { alert('Please select at least one number!'); return; }
+    if (!confirm('Are you sure? (' + ids.length + ' numbers)')) return;
+    var form = document.getElementById('adminForm');
+    form.action = url;
+    form.submit();
+}
+</script>
+{% endblock %}
+{% endblock %}

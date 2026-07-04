@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Bank / USDT Accounts{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-university"></i> My Bank / USDT Accounts</h4>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:20px;">
+    <h6 style="margin:0 0 14px 0; color:var(--txt);"><i class="fa fa-plus-circle"></i> Add New Account</h6>
+    <form method="POST" action="{{ url_for('billing.bank_accounts') }}" style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
+        <input type="hidden" name="action" value="add">
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">METHOD</label>
+            <select name="method" required
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:8px 12px; font-size:13px;">
+                <option value="USDT-TRC20">USDT (TRC20)</option>
+                <option value="USDT-BEP20">USDT (BEP20)</option>
+                <option value="Bank">Bank Transfer</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">LABEL (optional)</label>
+            <input type="text" name="label" placeholder="e.g. Binance Wallet"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:8px 12px; font-size:13px;">
+        </div>
+        <div style="flex:1; min-width:220px;">
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">ACCOUNT DETAILS / ADDRESS</label>
+            <input type="text" name="account_details" required placeholder="Wallet address or account number"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:8px 12px; font-size:13px; width:100%;">
+        </div>
+        <button type="submit" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:9px 18px; font-size:13px; font-weight:700; cursor:pointer;">
+            <i class="fa fa-plus"></i> Add
+        </button>
+    </form>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Method</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Label</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Account Details</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Added On</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if accounts %}
+                {% for acc in accounts %}
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:12px 16px; color:var(--accent); font-weight:600;">{{ acc.method }}</td>
+                    <td style="padding:12px 16px; color:var(--txt);">{{ acc.label or '—' }}</td>
+                    <td style="padding:12px 16px; color:var(--txt); font-family:monospace;">{{ acc.account_details }}</td>
+                    <td style="padding:12px 16px; color:var(--muted); white-space:nowrap;">{{ acc.created_at.strftime('%Y-%m-%d %H:%M') if acc.created_at else '—' }}</td>
+                    <td style="padding:12px 16px; white-space:nowrap;">
+                        <form method="POST" action="{{ url_for('billing.bank_accounts') }}" style="display:inline;"
+                              onsubmit="return confirm('Delete this account?');">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="account_id" value="{{ acc.id }}">
+                            <button type="submit" style="background:var(--danger); color:#fff; border:none; border-radius:6px; padding:5px 12px; font-size:12px; cursor:pointer;">
+                                <i class="fa fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="5" style="padding:40px; text-align:center; color:var(--muted);">No accounts added yet.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

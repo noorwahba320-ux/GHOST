@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Range Daily Limits{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-sliders"></i> Range Daily Limits</h4>
+    <p style="color:var(--muted); font-size:13px; margin-top:6px;">প্রতিটা Range থেকে সব Agent দিনে কতটা নাম্বার নিতে পারবে সেটা এখান থেকে set করো।</p>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Country</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Prefix</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Available</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Daily Limit (all agents)</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in ranges %}
+                <tr style="border-bottom:1px solid var(--border); transition:background .15s;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+                    <td style="padding:12px 16px;"><strong>{{ r.name if r.name else r.country }}</strong></td>
+                    <td style="padding:12px 16px; font-family:monospace; color:var(--accent);">+{{ r.prefix }}</td>
+                    <td style="padding:12px 16px; color:var(--success); font-weight:700;">{{ r.get_available_count() }}</td>
+                    <td style="padding:12px 16px;">
+                        <form method="POST" action="{{ url_for('admin.set_range_limit', range_id=r.id) }}" style="display:flex; gap:8px; align-items:center;">
+                            <input type="number" name="daily_limit" value="{{ r.daily_limit }}" min="1"
+                                style="width:90px; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:6px 10px; font-size:13px;">
+                            <button type="submit" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer;">
+                                <i class="fa fa-save"></i> Save
+                            </button>
+                        </form>
+                    </td>
+                    <td style="padding:12px 16px; color:var(--muted); font-size:12px;">
+                        Per agent per day
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

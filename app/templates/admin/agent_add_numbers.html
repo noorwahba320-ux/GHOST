@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Add Numbers{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-plus-circle"></i> Add Numbers</h4>
+    <p style="color:var(--muted); font-size:13px; margin-top:6px;">Select a range and take numbers. Daily limit applies per range.</p>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:20px;">
+    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
+        <div style="background:var(--hover); border:1px solid var(--border); border-radius:8px; padding:14px 20px; text-align:center;">
+            <div style="font-size:24px; font-weight:800; color:var(--accent);">{{ current_numbers }}</div>
+            <div style="font-size:12px; color:var(--muted); margin-top:4px;">Total Numbers in My Account</div>
+        </div>
+    </div>
+
+    <!-- Search/Filter -->
+    <form method="GET" id="filterForm" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px;">
+        <input type="text" name="search" value="{{ request.args.get('search','') }}" placeholder="Search range or country..."
+            style="flex:1; min-width:160px; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:8px 12px; font-size:13px;">
+        <select name="per_page" onchange="document.getElementById('filterForm').submit()"
+            style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:8px 12px; font-size:13px;">
+            {% for n in [25, 50, 100, 500] %}
+            <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+            {% endfor %}
+            <option value="99999" {% if per_page == 99999 %}selected{% endif %}>All</option>
+        </select>
+        <button type="submit" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:8px 18px; font-size:13px; font-weight:700; cursor:pointer;">
+            <i class="fa fa-search"></i> Search
+        </button>
+    </form>
+
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Range Name</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Country</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Prefix</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Payout / OTP</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Daily Limit</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Today Taken</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Remaining</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Take Numbers</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if ranges.items %}
+                {% for r in ranges.items %}
+                {% set today_taken = r.get_today_taken_by_agent(current_user.id) %}
+                {% set remaining = (r.daily_limit - today_taken) if r.daily_limit > 0 else 999999 %}
+                <tr style="border-bottom:1px solid var(--border); transition:background .15s;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+                    <td style="padding:12px 16px;">
+                        <strong style="color:var(--accent);">{{ r.name if r.name else (r.prefix + ' - ' + r.country) }}</strong>
+                    </td>
+                    <td style="padding:12px 16px;">{{ r.country }}
+                        {% if r.operator %}<br><span style="color:var(--muted); font-size:11px;">{{ r.operator }}</span>{% endif %}
+                    </td>
+                    <td style="padding:12px 16px; font-family:monospace; color:var(--txt);">+{{ r.prefix }}</td>
+                    <td style="padding:12px 16px;">
+                        {% if r.payout > 0 %}
+                        <span style="color:var(--success); font-weight:700;">${{ '%.4f'|format(r.payout) }}</span>
+                        {% else %}
+                        <span style="color:var(--muted);">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:12px 16px;">
+                        {% if r.daily_limit > 0 %}
+                        <span style="color:var(--warn); font-weight:700;">{{ r.daily_limit }}</span>/day
+                        {% else %}
+                        <span style="color:var(--success);">Unlimited</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:12px 16px; color:var(--txt);">{{ today_taken }}</td>
+                    <td style="padding:12px 16px;">
+                        {% if r.daily_limit > 0 %}
+                            {% if remaining > 0 %}
+                            <span style="color:var(--success); font-weight:700;">{{ remaining }}</span>
+                            {% else %}
+                            <span style="color:var(--danger); font-weight:700;">0</span>
+                            {% endif %}
+                        {% else %}
+                        <span style="color:var(--success);">Unlimited</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:12px 16px;">
+                        {% if remaining > 0 %}
+                        <form method="POST" action="{{ url_for('admin.agent_add_numbers') }}" style="display:flex; flex-direction:column; gap:6px;">
+                            <input type="hidden" name="range_id" value="{{ r.id }}">
+                            <div style="display:flex; gap:6px; align-items:center;">
+                                <input type="number" name="numbers_count" id="count-{{ r.id }}" value="25" min="1"
+                                    {% if r.daily_limit > 0 %}max="{{ remaining }}"{% endif %}
+                                    style="width:70px; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:5px 8px; font-size:13px;">
+                                <button type="submit" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:6px 14px; font-size:13px; font-weight:700; cursor:pointer;">
+                                    <i class="fa fa-plus"></i> Take
+                                </button>
+                            </div>
+                            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                {% for amt in [25, 50, 100, 500] %}
+                                <button type="button" onclick="document.getElementById('count-{{ r.id }}').value={{ amt }}"
+                                    style="background:var(--hover); color:var(--muted); border:1px solid var(--border); border-radius:4px; padding:3px 8px; font-size:11px; cursor:pointer;">{{ amt }}</button>
+                                {% endfor %}
+                                <button type="button" onclick="document.getElementById('count-{{ r.id }}').value={{ remaining if remaining < 999999 else 100000 }}"
+                                    style="background:var(--hover); color:var(--muted); border:1px solid var(--border); border-radius:4px; padding:3px 8px; font-size:11px; cursor:pointer;">All</button>
+                            </div>
+                        </form>
+                        {% else %}
+                        <span style="color:var(--danger); font-size:12px;">Limit reached</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="8" style="padding:40px; text-align:center; color:var(--muted);">
+                        <i class="fa fa-inbox" style="font-size:32px; display:block; margin-bottom:10px;"></i>
+                        No ranges available.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if ranges.pages > 1 %}
+    <div style="padding:14px 0 0; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <span style="font-size:13px; color:var(--muted);">Page {{ ranges.page }} of {{ ranges.pages }} — {{ ranges.total }} total</span>
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+            {% if ranges.has_prev %}
+            <a href="{{ url_for('admin.agent_add_numbers', page=ranges.prev_num, search=request.args.get('search',''), per_page=per_page) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">‹ Prev</a>
+            {% endif %}
+            {% for p in range([1, ranges.page-2]|max, [ranges.pages+1, ranges.page+3]|min) %}
+            <a href="{{ url_for('admin.agent_add_numbers', page=p, search=request.args.get('search',''), per_page=per_page) }}"
+               style="background:{% if p == ranges.page %}var(--accent){% else %}var(--hover){% endif %}; color:{% if p == ranges.page %}#000{% else %}var(--txt){% endif %}; border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">{{ p }}</a>
+            {% endfor %}
+            {% if ranges.has_next %}
+            <a href="{{ url_for('admin.agent_add_numbers', page=ranges.next_num, search=request.args.get('search',''), per_page=per_page) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">Next ›</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

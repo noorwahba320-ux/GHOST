@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}OTP Logs (Admin){% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── page layout ── */
+.page-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;}
+.page-title{margin:0;color:var(--accent);font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);
+  box-shadow:0 0 0 0 rgba(16,185,129,.6);animation:livepulse 1.6s infinite;}
+@keyframes livepulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.55);}70%{box-shadow:0 0 0 8px rgba(16,185,129,0);}100%{box-shadow:0 0 0 0 rgba(16,185,129,0);}}
+
+/* ── stats strip ── */
+.stats-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:18px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.stat-label{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700;}
+.stat-value{font-size:22px;font-weight:800;}
+
+/* ── filter bar ── */
+.filter-bar{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:18px;}
+.filter-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
+.filter-row label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.8px;}
+.f-input{background:var(--hover);border:1px solid var(--border);color:var(--txt);
+  border-radius:7px;padding:8px 12px;font-size:13px;min-width:0;}
+.f-input:focus{outline:none;border-color:var(--info);}
+select.f-input option{background:var(--card);}
+.btn-filter{background:var(--info);color:#000;border:none;border-radius:7px;
+  padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.btn-export{background:var(--warn);color:#000;border:none;border-radius:7px;
+  padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+
+/* ── table card ── */
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.table-scroll{overflow-x:auto;}
+
+table.otp-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+table.otp-tbl thead tr{border-bottom:2px solid var(--border);}
+table.otp-tbl thead th{
+  padding:11px 14px;text-align:left;
+  color:var(--muted);font-weight:700;font-size:11.5px;
+  text-transform:uppercase;letter-spacing:.8px;
+  white-space:nowrap;
+}
+table.otp-tbl tbody tr{border-bottom:1px solid var(--border);transition:background .12s;}
+table.otp-tbl tbody tr:hover{background:var(--hover);}
+table.otp-tbl tbody td{padding:10px 14px;vertical-align:middle;}
+
+/* ── cell types ── */
+.cell-date{white-space:nowrap;color:var(--muted);font-size:12px;}
+.cell-range{color:#5b9dff;font-weight:600;white-space:nowrap;}
+.cell-number{font-family:monospace;color:var(--accent);font-weight:700;white-space:nowrap;}
+.badge-otp{
+  display:inline-block;
+  background:#10b981;color:#000;
+  border-radius:6px;padding:4px 10px;
+  font-weight:800;font-size:13px;
+  white-space:nowrap;          /* ← الإصلاح الأساسي */
+  letter-spacing:.5px;
+}
+.cell-msg{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);}
+.cell-client{white-space:nowrap;color:var(--txt);}
+.cell-provider{white-space:nowrap;color:var(--muted);font-size:12px;}
+
+/* ── empty state ── */
+.empty-state{padding:50px;text-align:center;color:var(--muted);}
+.empty-state i{font-size:36px;display:block;margin-bottom:10px;}
+
+/* ── pagination ── */
+.pager{padding:14px 16px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.pager-info{font-size:13px;color:var(--muted);}
+.pager-links{display:flex;gap:4px;flex-wrap:wrap;}
+.pager-links a,.pager-links span{
+  background:var(--hover);color:var(--txt);
+  border:1px solid var(--border);border-radius:6px;
+  padding:5px 12px;text-decoration:none;font-size:13px;
+  transition:all .15s;
+}
+.pager-links a:hover{background:var(--accent);color:#000;border-color:var(--accent);}
+.pager-links span.cur{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700;}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── page header ── -->
+<div class="page-head">
+  <h4 class="page-title">
+    <i class="fa fa-key"></i> OTP Logs (Admin)
+    <small style="font-size:11px;font-weight:400;color:var(--muted);">
+      <span class="live-dot"></span> Live Monitoring
+    </small>
+  </h4>
+  <span style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:13px;">
+    Total: <strong style="color:var(--accent);">{{ logs.total }}</strong>
+  </span>
+</div>
+
+<!-- ── stats strip ── -->
+<div class="stats-strip">
+  <div class="stat-card">
+    <div class="stat-label"><span class="live-dot"></span> Live (5 min)</div>
+    <div class="stat-value" style="color:var(--success);">{{ stats.live if stats else 0 }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Today</div>
+    <div class="stat-value" style="color:var(--accent);">{{ stats.today if stats else 0 }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">This Week</div>
+    <div class="stat-value" style="color:var(--info);">{{ stats.week if stats else 0 }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Total Codes</div>
+    <div class="stat-value" style="color:var(--txt);">{{ stats.total if stats else 0 }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Active Providers</div>
+    <div class="stat-value" style="color:var(--warn);">
+      {{ stats.active_providers if stats else 0 }}
+      <span style="font-size:13px;color:var(--muted);font-weight:400;">/ {{ stats.total_providers if stats else 0 }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── filter bar ── -->
+<div class="filter-bar">
+  <form method="GET" action="{{ url_for('provider.otp_logs') }}" id="filterForm">
+    <div class="filter-row">
+      <div>
+        <label>From</label>
+        <input type="date" name="fdate1" value="{{ request.args.get('fdate1','') }}" class="f-input">
+      </div>
+      <div>
+        <label>To</label>
+        <input type="date" name="fdate2" value="{{ request.args.get('fdate2','') }}" class="f-input">
+      </div>
+      <div>
+        <label>Range</label>
+        <select name="frange" class="f-input">
+          <option value="">All Ranges</option>
+          {% for r in ranges %}
+          <option value="{{ r.id }}" {% if request.args.get('frange') == r.id|string %}selected{% endif %}>
+            {{ r.name if r.name else '+' + r.prefix + ' — ' + r.country }}{% if r.operator %} ({{ r.operator }}){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Provider</label>
+        <select name="fprovider" class="f-input">
+          <option value="">All Providers</option>
+          {% for p in providers %}
+          <option value="{{ p.id }}" {% if request.args.get('fprovider') == p.id|string %}selected{% endif %}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Number</label>
+        <input type="text" name="fnum" value="{{ request.args.get('fnum','') }}" placeholder="+123…" class="f-input" style="width:130px;">
+      </div>
+      <div>
+        <label>Show</label>
+        <select name="per_page" class="f-input" onchange="document.getElementById('filterForm').submit()">
+          {% for n in [25,50,100] %}
+          <option value="{{ n }}" {% if request.args.get('per_page','50') == n|string %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn-filter"><i class="fa fa-eye"></i> Show</button>
+      <button type="submit" name="export" value="1" class="btn-export"><i class="fa fa-download"></i> Export</button>
+    </div>
+  </form>
+</div>
+
+<!-- ── data table ── -->
+<div class="table-card">
+  <div class="table-scroll">
+    <table class="otp-tbl">
+      <thead>
+        <tr>
+          <th>Date / Time</th>
+          <th>Range</th>
+          <th>Number</th>
+          <th>OTP Code</th>
+          <th>Sender</th>
+          <th>Client</th>
+          <th>SMS Message</th>
+          <th>Provider</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if logs.items %}
+          {% for l in logs.items %}
+          <tr>
+            <td class="cell-date">{{ l.received_at.strftime('%Y-%m-%d %H:%M:%S') if l.received_at else '—' }}</td>
+            <td class="cell-range">
+              {% if l.sms_number and l.sms_number.sms_range %}
+                {{ l.sms_number.sms_range.name if l.sms_number.sms_range.name
+                   else '+' + l.sms_number.sms_range.prefix + ' — ' + l.sms_number.sms_range.country }}
+                {% if l.sms_number.sms_range.operator %} ({{ l.sms_number.sms_range.operator }}){% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td class="cell-number">+{{ l.number }}</td>
+            <td><span class="badge-otp">{{ l.otp }}</span></td>
+            <td style="white-space:nowrap;">{{ l.sender or '—' }}</td>
+            <td class="cell-client">
+              {% if l.sms_number and l.sms_number.client_id %}
+              <div style="font-size:10px; color:var(--info); font-weight:700; text-transform:uppercase; letter-spacing:.5px;">Client</div>
+              <div>{{ l.user.username if l.user else '—' }}</div>
+              {% elif l.sms_number and l.sms_number.agent_id %}
+              <div style="font-size:10px; color:var(--warn); font-weight:700; text-transform:uppercase; letter-spacing:.5px;">Agent</div>
+              <div>{{ l.user.username if l.user else '—' }}</div>
+              {% else %}
+              —
+              {% endif %}
+            </td>
+            <td class="cell-msg" title="{{ l.message or '' }}">{{ l.message or '—' }}</td>
+            <td class="cell-provider">{{ l.provider.name if l.provider else '—' }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <i class="fa fa-inbox"></i>
+                No OTP logs found.
+              </div>
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if logs.pages > 1 %}
+  <div class="pager">
+    <span class="pager-info">Page {{ logs.page }} of {{ logs.pages }} — {{ logs.total }} total</span>
+    <div class="pager-links">
+      {% set args = {'fdate1': request.args.get('fdate1',''), 'fdate2': request.args.get('fdate2',''),
+                     'frange': request.args.get('frange',''), 'fprovider': request.args.get('fprovider',''),
+                     'fnum': request.args.get('fnum',''), 'per_page': request.args.get('per_page','50')} %}
+      {% if logs.has_prev %}
+        <a href="{{ url_for('provider.otp_logs', page=logs.prev_num, **args) }}">‹ Prev</a>
+      {% endif %}
+      {% for p in range([1, logs.page-2]|max, [logs.pages+1, logs.page+3]|min) %}
+        {% if p == logs.page %}
+          <span class="cur">{{ p }}</span>
+        {% else %}
+          <a href="{{ url_for('provider.otp_logs', page=p, **args) }}">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if logs.has_next %}
+        <a href="{{ url_for('provider.otp_logs', page=logs.next_num, **args) }}">Next ›</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

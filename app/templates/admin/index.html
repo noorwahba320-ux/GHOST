@@ -1,0 +1,393 @@
+{% extends "base.html" %}
+{% block title %}Admin Overview{% endblock %}
+
+{% block content %}
+<style>
+.page-header {
+    margin-bottom:28px;
+}
+.page-header h1 {
+    font-size:32px;
+    font-weight:900;
+    background:linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+    margin:0;
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.kpi-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+    gap:18px;
+    margin-bottom:28px;
+}
+
+.kpi-card {
+    background:linear-gradient(135deg, var(--card) 0%, rgba(239,68,68,.05) 100%);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:24px;
+    transition:all .3s cubic-bezier(.4,0,.2,1);
+    position:relative;
+    overflow:hidden;
+}
+
+.kpi-card::before {
+    content:'';
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    height:3px;
+    background:linear-gradient(90deg, var(--accent) 0%, transparent 100%);
+    opacity:0;
+    transition:opacity .3s;
+}
+
+.kpi-card:hover {
+    border-color:var(--accent);
+    box-shadow:0 8px 24px rgba(239,68,68,.15);
+    transform:translateY(-4px);
+}
+
+.kpi-card:hover::before {
+    opacity:1;
+}
+
+.kpi-label {
+    font-size:11px;
+    color:var(--muted);
+    font-weight:700;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    margin-bottom:12px;
+}
+
+.kpi-value {
+    font-size:36px;
+    font-weight:900;
+    color:var(--txt);
+    line-height:1;
+    margin-bottom:8px;
+}
+
+.kpi-card.accent .kpi-value {
+    background:linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+}
+
+.kpi-card.success .kpi-value {
+    color:var(--success-light);
+}
+
+.kpi-card.warn .kpi-value {
+    color:var(--warn);
+}
+
+.kpi-change {
+    font-size:12px;
+    color:var(--muted);
+    display:flex;
+    align-items:center;
+    gap:4px;
+}
+
+.kpi-change.positive {
+    color:var(--success-light);
+}
+
+.content-grid {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    margin-bottom:28px;
+}
+
+.content-card {
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:24px;
+    transition:all .3s;
+}
+
+.content-card:hover {
+    border-color:var(--border);
+    box-shadow:0 8px 24px rgba(0,0,0,.3);
+}
+
+.card-header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:20px;
+    padding-bottom:16px;
+    border-bottom:1px solid var(--border);
+}
+
+.card-title {
+    font-size:14px;
+    font-weight:800;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:var(--muted);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:0;
+}
+
+.card-title i {
+    color:var(--accent);
+    font-size:16px;
+}
+
+.btn-add {
+    background:linear-gradient(135deg, var(--accent) 0%, var(--danger) 100%);
+    color:white;
+    border:none;
+    border-radius:8px;
+    padding:6px 14px;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+    transition:all .2s;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+}
+
+.btn-add:hover {
+    transform:translateY(-2px);
+    box-shadow:0 4px 12px rgba(239,68,68,.3);
+    color:white;
+    text-decoration:none;
+}
+
+.news-item {
+    padding:14px 0;
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    transition:all .2s;
+}
+
+.news-item:last-child {
+    border-bottom:none;
+}
+
+.news-item:hover {
+    background:rgba(239,68,68,.05);
+    padding-left:8px;
+}
+
+.news-content {
+    flex:1;
+}
+
+.news-headline {
+    font-weight:700;
+    font-size:13px;
+    color:var(--txt);
+    margin:0 0 4px;
+}
+
+.news-date {
+    font-size:11px;
+    color:var(--muted);
+}
+
+.btn-delete {
+    background:rgba(220,38,38,.2);
+    color:var(--danger);
+    border:1px solid var(--danger);
+    border-radius:6px;
+    padding:4px 8px;
+    font-size:11px;
+    cursor:pointer;
+    transition:all .2s;
+}
+
+.btn-delete:hover {
+    background:var(--danger);
+    color:white;
+}
+
+.quick-link {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--hover);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px 16px;
+    text-decoration:none;
+    color:var(--txt);
+    transition:all .25s;
+}
+
+.quick-link:hover {
+    background:rgba(239,68,68,.1);
+    border-color:var(--accent);
+    transform:translateX(4px);
+    color:var(--accent);
+}
+
+.quick-link i {
+    font-size:16px;
+    min-width:20px;
+}
+
+.empty-state {
+    text-align:center;
+    padding:32px 16px;
+    color:var(--muted);
+}
+
+@media(max-width:768px) {
+    .content-grid {
+        grid-template-columns:1fr;
+    }
+    .kpi-grid {
+        grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));
+        gap:12px;
+    }
+    .page-header h1 {
+        font-size:24px;
+    }
+}
+</style>
+
+<div class="page-header">
+    <h1><i class="fa fa-dashboard"></i> Admin Overview</h1>
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+    <div class="kpi-card accent">
+        <div class="kpi-label"><i class="fa fa-users"></i> Total Users</div>
+        <div class="kpi-value">{{ stats.total_users }}</div>
+        <div class="kpi-change">
+            <i class="fa fa-arrow-up"></i> Active system
+        </div>
+    </div>
+
+    <div class="kpi-card success">
+        <div class="kpi-label"><i class="fa fa-check-circle"></i> Active Users</div>
+        <div class="kpi-value">{{ stats.active_users }}</div>
+        <div class="kpi-change positive">
+            <i class="fa fa-arrow-up"></i> Online now
+        </div>
+    </div>
+
+    <div class="kpi-card warn">
+        <div class="kpi-label"><i class="fa fa-phone"></i> Total Numbers</div>
+        <div class="kpi-value">{{ stats.total_numbers }}</div>
+        <div class="kpi-change">
+            <i class="fa fa-arrow-right"></i> SMS ready
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-label"><i class="fa fa-flag"></i> Total Ranges</div>
+        <div class="kpi-value">{{ stats.total_ranges }}</div>
+        <div class="kpi-change">
+            <i class="fa fa-arrow-right"></i> Configured
+        </div>
+    </div>
+
+    <div class="kpi-card accent">
+        <div class="kpi-label"><i class="fa fa-envelope"></i> Today SMS</div>
+        <div class="kpi-value">{{ stats.today_sms }}</div>
+        <div class="kpi-change positive">
+            <i class="fa fa-arrow-up"></i> Messages sent
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-label"><i class="fa fa-file-text"></i> Total CDR</div>
+        <div class="kpi-value">{{ stats.total_cdr }}</div>
+        <div class="kpi-change">
+            <i class="fa fa-arrow-right"></i> Records logged
+        </div>
+    </div>
+</div>
+
+<!-- Content Grid -->
+<div class="content-grid">
+    <!-- Latest News -->
+    <div class="content-card">
+        <div class="card-header">
+            <h6 class="card-title">
+                <i class="fa fa-bullhorn"></i> Latest News
+            </h6>
+            <a href="{{ url_for('admin.create_news') }}" class="btn-add">
+                <i class="fa fa-plus"></i> Add
+            </a>
+        </div>
+        {% if recent_news %}
+            {% for news in recent_news %}
+            <div class="news-item">
+                <div class="news-content">
+                    <div class="news-headline">{{ news.headline }}</div>
+                    <div class="news-date">{{ news.created_at.strftime('%Y-%m-%d %H:%M') if news.created_at else 'N/A' }}</div>
+                </div>
+                <form method="POST" action="{{ url_for('admin.delete_news', news_id=news.id) }}" onsubmit="return confirm('Delete this news?')" style="margin:0;">
+                    <button type="submit" class="btn-delete">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fa fa-inbox" style="font-size:32px; opacity:.5; display:block; margin-bottom:8px;"></i>
+                <p>No news available yet</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Links -->
+    <div class="content-card">
+        <div class="card-header">
+            <h6 class="card-title">
+                <i class="fa fa-link"></i> Quick Links
+            </h6>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <a href="{{ url_for('admin.users') }}" class="quick-link">
+                <i class="fa fa-users"></i>
+                <span>Manage Users</span>
+            </a>
+            <a href="{{ url_for('admin.sms_ranges') }}" class="quick-link">
+                <i class="fa fa-flag"></i>
+                <span>SMS Ranges</span>
+            </a>
+            <a href="{{ url_for('admin.sms_numbers') }}" class="quick-link">
+                <i class="fa fa-phone"></i>
+                <span>All Numbers</span>
+            </a>
+            <a href="{{ url_for('admin.agent_limits') }}" class="quick-link">
+                <i class="fa fa-sliders"></i>
+                <span>Range Limits</span>
+            </a>
+            <a href="{{ url_for('admin.add_numbers_to_agent') }}" class="quick-link">
+                <i class="fa fa-plus-circle"></i>
+                <span>Add Numbers to Agent</span>
+            </a>
+            <a href="{{ url_for('admin.activity_logs') }}" class="quick-link">
+                <i class="fa fa-history"></i>
+                <span>Activity Logs</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

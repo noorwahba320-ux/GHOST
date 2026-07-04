@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-user"></i> My Profile</h4>
+</div>
+
+{% if current_user.is_test_account() %}
+<div style="background:var(--card); border:1px solid var(--warn); border-radius:10px; padding:20px; display:flex; gap:12px; align-items:flex-start;">
+    <i class="fa fa-info-circle" style="color:var(--warn); font-size:20px; margin-top:2px;"></i>
+    <div>
+        <strong style="color:var(--warn);">This is a shared demo account</strong>
+        <p style="margin:6px 0 0; color:var(--muted); font-size:13px;">
+            Test123 is used by everyone to try the panel, so the password and profile
+            details can't be changed here.
+        </p>
+    </div>
+</div>
+{% else %}
+<div class="grid-1-1">
+
+    <!-- Edit Profile -->
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px;">
+        <h6 style="font-size:13px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:16px;">
+            <i class="fa fa-edit"></i> Edit Profile
+        </h6>
+        <form method="POST">
+            <input type="hidden" name="action" value="update_profile">
+
+            <div style="margin-bottom:14px;">
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px;">Full Name</label>
+                <input type="text" name="name" value="{{ current_user.name or '' }}"
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px;">Email</label>
+                <input type="email" name="email" value="{{ current_user.email or '' }}"
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px;">Company</label>
+                <input type="text" name="company" value="{{ current_user.company or '' }}"
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px;">Contact Number</label>
+                <input type="text" name="contact" value="{{ current_user.contact or '' }}"
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px;">Skype</label>
+                <input type="text" name="skype" value="{{ current_user.skype or '' }}"
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px;">Country</label>
+                <input type="text" name="country" value="{{ current_user.country or '' }}"
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px;">Address</label>
+                <textarea name="address" rows="3"
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">{{ current_user.address or '' }}</textarea>
+            </div>
+
+            <button type="submit" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:10px 24px; font-size:13px; font-weight:700; cursor:pointer;">
+                <i class="fa fa-save"></i> Update Profile
+            </button>
+        </form>
+    </div>
+
+    <!-- Change Password -->
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px;">
+        <h6 style="font-size:13px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:16px;">
+            <i class="fa fa-lock"></i> Change Password
+        </h6>
+        <form method="POST">
+            <input type="hidden" name="action" value="change_password">
+
+            <div style="margin-bottom:14px;">
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px;">Current Password</label>
+                <input type="password" name="current_password" required
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px;">New Password</label>
+                <input type="password" name="new_password" required
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px;">Confirm New Password</label>
+                <input type="password" name="confirm_password" required
+                    style="width:100%; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:9px 12px; font-size:13px;">
+            </div>
+
+            <button type="submit" style="background:var(--warn); color:#000; border:none; border-radius:6px; padding:10px 24px; font-size:13px; font-weight:700; cursor:pointer;">
+                <i class="fa fa-key"></i> Change Password
+            </button>
+        </form>
+    </div>
+
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Statements{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-book"></i> My Statements</h4>
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:10px 18px;">
+        <span style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Current Balance:</span>
+        <span style="font-size:16px; font-weight:800; color:var(--success); margin-left:8px;">{{ '%.4f'|format(current_balance) }} USDT</span>
+    </div>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Date</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Description</th>
+                    <th style="padding:12px 16px; text-align:right; color:var(--muted); font-weight:600;">Credit</th>
+                    <th style="padding:12px 16px; text-align:right; color:var(--muted); font-weight:600;">Debit</th>
+                    <th style="padding:12px 16px; text-align:right; color:var(--muted); font-weight:600;">Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if pagination.items %}
+                {% for row in pagination.items %}
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:12px 16px; color:var(--muted); white-space:nowrap;">{{ row.date.strftime('%Y-%m-%d %H:%M') if row.date else '—' }}</td>
+                    <td style="padding:12px 16px; color:var(--txt);">{{ row.description }}</td>
+                    <td style="padding:12px 16px; text-align:right; color:var(--success);">{% if row.credit > 0 %}+{{ '%.4f'|format(row.credit) }}{% else %}—{% endif %}</td>
+                    <td style="padding:12px 16px; text-align:right; color:var(--danger);">{% if row.debit > 0 %}-{{ '%.4f'|format(row.debit) }}{% else %}—{% endif %}</td>
+                    <td style="padding:12px 16px; text-align:right; color:var(--accent); font-weight:700;">{{ '%.4f'|format(row.running_balance) }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="5" style="padding:40px; text-align:center; color:var(--muted);">No transactions yet.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <div style="padding:14px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <span style="font-size:13px; color:var(--muted);">Page {{ pagination.page }} of {{ pagination.pages }} — {{ pagination.total }} total</span>
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('billing.statements', page=pagination.prev_num) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">‹ Prev</a>
+            {% endif %}
+            {% for p in pagination.iter_pages() %}
+            <a href="{{ url_for('billing.statements', page=p) }}"
+               style="background:{% if p == pagination.page %}var(--accent){% else %}var(--hover){% endif %}; color:{% if p == pagination.page %}#000{% else %}var(--txt){% endif %}; border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">{{ p }}</a>
+            {% endfor %}
+            {% if pagination.has_next %}
+            <a href="{{ url_for('billing.statements', page=pagination.next_num) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">Next ›</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

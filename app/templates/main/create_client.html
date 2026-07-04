@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Add New Client - FLASH SMS PANEL{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="breadcrumb">
+            <h4><i class="fa fa-user-plus"></i> Add New Client</h4>
+        </div>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}">{{ message }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="card" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;">
+    <form method="POST">
+        <div class="row">
+            <div class="col-md-6" style="margin-bottom:16px;">
+                <label style="color:var(--muted);font-size:13px;display:block;margin-bottom:6px;">Username *</label>
+                <input type="text" name="username" required style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--txt);border-radius:6px;padding:8px 12px;font-size:14px;">
+            </div>
+            <div class="col-md-6" style="margin-bottom:16px;">
+                <label style="color:var(--muted);font-size:13px;display:block;margin-bottom:6px;">Email *</label>
+                <input type="email" name="email" required style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--txt);border-radius:6px;padding:8px 12px;font-size:14px;">
+            </div>
+            <div class="col-md-6" style="margin-bottom:16px;">
+                <label style="color:var(--muted);font-size:13px;display:block;margin-bottom:6px;">Password *</label>
+                <input type="password" name="password" required style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--txt);border-radius:6px;padding:8px 12px;font-size:14px;">
+            </div>
+            <div class="col-md-6" style="margin-bottom:16px;">
+                <label style="color:var(--muted);font-size:13px;display:block;margin-bottom:6px;">Full Name</label>
+                <input type="text" name="name" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--txt);border-radius:6px;padding:8px 12px;font-size:14px;">
+            </div>
+            <div class="col-md-6" style="margin-bottom:16px;">
+                <label style="color:var(--muted);font-size:13px;display:block;margin-bottom:6px;">Company</label>
+                <input type="text" name="company" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--txt);border-radius:6px;padding:8px 12px;font-size:14px;">
+            </div>
+            <div class="col-md-6" style="margin-bottom:16px;">
+                <label style="color:var(--muted);font-size:13px;display:block;margin-bottom:6px;">Contact</label>
+                <input type="text" name="contact" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--txt);border-radius:6px;padding:8px 12px;font-size:14px;">
+            </div>
+            <div class="col-md-6" style="margin-bottom:16px;">
+                <label style="color:var(--muted);font-size:13px;display:block;margin-bottom:6px;">Country</label>
+                <input type="text" name="country" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--txt);border-radius:6px;padding:8px 12px;font-size:14px;">
+            </div>
+        </div>
+        <button type="submit" style="background:var(--accent);color:#000;border:none;border-radius:6px;padding:10px 24px;font-weight:600;cursor:pointer;">
+            <i class="fa fa-user-plus"></i> Create Client
+        </button>
+        <a href="{{ url_for('main.clients') }}" style="background:var(--hover);color:var(--txt);border:1px solid var(--border);border-radius:6px;padding:10px 24px;font-weight:600;text-decoration:none;margin-left:8px;">
+            Cancel
+        </a>
+    </form>
+</div>
+{% endblock %}

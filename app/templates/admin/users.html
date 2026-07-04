@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Users — Admin{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-users"></i> Users</h4>
+    <a href="{{ url_for('admin.create_user') }}" style="background:var(--accent); color:#000; border-radius:6px; padding:8px 18px; font-size:13px; font-weight:700; text-decoration:none;">
+        <i class="fa fa-plus"></i> Add User
+    </a>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:16px;">
+    <form method="GET" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+        <input type="text" name="search" value="{{ request.args.get('search','') }}" placeholder="Search username, email, name..."
+            style="flex:1; min-width:160px; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+        <select name="role" style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+            <option value="">All Roles</option>
+            {% for role in roles %}
+            <option value="{{ role.name }}" {% if request.args.get('role') == role.name %}selected{% endif %}>{{ role.display_name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:8px 18px; font-size:13px; font-weight:700; cursor:pointer;">
+            <i class="fa fa-search"></i> Search
+        </button>
+    </form>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Username</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Email</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Role</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Agent</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Status</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Created</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if users.items %}
+                {% for user in users.items %}
+                <tr style="border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+                    <td style="padding:12px 16px;">
+                        <strong style="color:var(--accent);">{{ user.username }}</strong>
+                        {% if user.name %}<br><span style="color:var(--muted); font-size:11px;">{{ user.name }}</span>{% endif %}
+                    </td>
+                    <td style="padding:12px 16px; color:var(--muted); font-size:12px;">{{ user.email }}</td>
+                    <td style="padding:12px 16px;">
+                        <span style="background:rgba(0,212,255,.1); color:var(--accent); padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700;">
+                            {{ user.role.display_name if user.role else 'N/A' }}
+                        </span>
+                    </td>
+                    <td style="padding:12px 16px; color:var(--muted);">{{ user.agent.username if user.agent else '—' }}</td>
+                    <td style="padding:12px 16px;">
+                        {% if user.is_active %}
+                        <span style="background:rgba(46,213,115,.15); color:var(--success); padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700;">Active</span>
+                        {% else %}
+                        <span style="background:rgba(255,71,87,.15); color:var(--danger); padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700;">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:12px 16px; color:var(--muted); font-size:12px;">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '—' }}</td>
+                    <td style="padding:12px 16px;">
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <a href="{{ url_for('admin.edit_user', user_id=user.id) }}"
+                               style="background:var(--accent); color:#000; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:700; text-decoration:none;">
+                                <i class="fa fa-edit"></i> Edit
+                            </a>
+                            <form method="POST" action="{{ url_for('admin.toggle_user_status', user_id=user.id) }}" style="display:inline;">
+                                <button type="submit" style="background:{% if user.is_active %}var(--danger){% else %}var(--success){% endif %}; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11px; cursor:pointer;">
+                                    <i class="fa fa-{% if user.is_active %}lock{% else %}unlock{% endif %}"></i>
+                                </button>
+                            </form>
+                            {% if user.id != current_user.id %}
+                            <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" onsubmit="return confirm('Delete {{ user.username }}?')">
+                                <button type="submit" style="background:var(--danger); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11px; cursor:pointer;">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="7" style="padding:40px; text-align:center; color:var(--muted);">No users found.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if users.pages > 1 %}
+    <div style="padding:14px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <span style="font-size:13px; color:var(--muted);">Page {{ users.page }} of {{ users.pages }} — {{ users.total }} total</span>
+        <div style="display:flex; gap:4px;">
+            {% if users.has_prev %}
+            <a href="{{ url_for('admin.users', page=users.prev_num, search=request.args.get('search',''), role=request.args.get('role','')) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">‹ Prev</a>
+            {% endif %}
+            {% for p in range([1, users.page-2]|max, [users.pages+1, users.page+3]|min) %}
+            <a href="{{ url_for('admin.users', page=p, search=request.args.get('search',''), role=request.args.get('role','')) }}"
+               style="background:{% if p == users.page %}var(--accent){% else %}var(--hover){% endif %}; color:{% if p == users.page %}#000{% else %}var(--txt){% endif %}; border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">{{ p }}</a>
+            {% endfor %}
+            {% if users.has_next %}
+            <a href="{{ url_for('admin.users', page=users.next_num, search=request.args.get('search',''), role=request.args.get('role','')) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">Next ›</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

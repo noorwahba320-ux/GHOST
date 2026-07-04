@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}My Clients - FLASH SMS PANEL{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="breadcrumb">
+            <h4><i class="fa fa-users"></i> My Clients</h4>
+        </div>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}">{{ message }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="card" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h5 style="color:var(--txt);margin:0;"><i class="fa fa-list"></i> Client List</h5>
+        <a href="{{ url_for('main.create_client') }}" style="background:var(--accent);color:#000;border:none;border-radius:6px;padding:8px 16px;font-weight:600;text-decoration:none;">
+            <i class="fa fa-plus"></i> Add New Client
+        </a>
+    </div>
+    <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:10px;color:var(--muted);text-align:left;font-size:13px;">USERNAME</th>
+                    <th style="padding:10px;color:var(--muted);text-align:left;font-size:13px;">EMAIL</th>
+                    <th style="padding:10px;color:var(--muted);text-align:left;font-size:13px;">NAME</th>
+                    <th style="padding:10px;color:var(--muted);text-align:left;font-size:13px;">COMPANY</th>
+                    <th style="padding:10px;color:var(--muted);text-align:left;font-size:13px;">COUNTRY</th>
+                    <th style="padding:10px;color:var(--muted);text-align:left;font-size:13px;">STATUS</th>
+                    <th style="padding:10px;color:var(--muted);text-align:left;font-size:13px;">CREATED</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for client in clients.items %}
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:10px;color:var(--txt);font-size:13px;">{{ client.username }}</td>
+                    <td style="padding:10px;color:var(--txt);font-size:13px;">{{ client.email }}</td>
+                    <td style="padding:10px;color:var(--txt);font-size:13px;">{{ client.name or '-' }}</td>
+                    <td style="padding:10px;color:var(--txt);font-size:13px;">{{ client.company or '-' }}</td>
+                    <td style="padding:10px;color:var(--txt);font-size:13px;">{{ client.country or '-' }}</td>
+                    <td style="padding:10px;font-size:13px;">
+                        {% if client.is_active %}
+                        <span style="color:var(--success);">Active</span>
+                        {% else %}
+                        <span style="color:var(--danger);">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:10px;color:var(--muted);font-size:13px;">{{ client.created_at.strftime('%Y-%m-%d') if client.created_at else 'N/A' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="padding:20px;text-align:center;color:var(--muted);">No clients found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

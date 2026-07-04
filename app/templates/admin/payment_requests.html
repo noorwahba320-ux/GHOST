@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Payment Requests{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-money"></i> Payment Requests</h4>
+    {% if pending_count > 0 %}
+    <span style="background:var(--warn); color:#000; padding:5px 14px; border-radius:14px; font-size:12px; font-weight:700;">
+        {{ pending_count }} Pending
+    </span>
+    {% endif %}
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:16px;">
+    <form method="GET" action="{{ url_for('billing.admin_payment_requests') }}" style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">AGENT</label>
+            <select name="fagent" onchange="this.form.submit()"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+                <option value="">All Agents</option>
+                {% for a in agents %}
+                <option value="{{ a.id }}" {% if request.args.get('fagent') == a.id|string %}selected{% endif %}>{{ a.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">STATUS</label>
+            <select name="fstatus" onchange="this.form.submit()"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+                <option value="">All</option>
+                <option value="pending" {% if request.args.get('fstatus') == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if request.args.get('fstatus') == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="paid" {% if request.args.get('fstatus') == 'paid' %}selected{% endif %}>Paid</option>
+                <option value="rejected" {% if request.args.get('fstatus') == 'rejected' %}selected{% endif %}>Rejected</option>
+            </select>
+        </div>
+    </form>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Date</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Agent</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Amount</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Method / Account</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Status</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if requests.items %}
+                {% for r in requests.items %}
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:12px 16px; color:var(--muted); white-space:nowrap;">{{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '—' }}</td>
+                    <td style="padding:12px 16px; color:var(--accent); font-weight:600;">{{ r.user.username if r.user else '—' }}</td>
+                    <td style="padding:12px 16px; color:var(--success); font-weight:700;">{{ '%.4f'|format(r.amount) }} USDT</td>
+                    <td style="padding:12px 16px; color:var(--txt); font-size:12px;">{{ r.method }}<br><span style="color:var(--muted);">{{ r.account_details }}</span></td>
+                    <td style="padding:12px 16px;">
+                        {% if r.status == 'pending' %}
+                        <span style="background:var(--warn); color:#000; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700;">PENDING</span>
+                        {% elif r.status == 'approved' %}
+                        <span style="background:#2e7de0; color:#fff; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700;">APPROVED</span>
+                        {% elif r.status == 'paid' %}
+                        <span style="background:var(--success); color:#000; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700;">PAID</span>
+                        {% else %}
+                        <span style="background:var(--danger); color:#fff; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700;">REJECTED</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:12px 16px; white-space:nowrap;">
+                        {% if r.status == 'pending' %}
+                        <form method="POST" action="{{ url_for('billing.admin_payment_requests') }}" style="display:inline-flex; gap:4px;">
+                            <input type="hidden" name="request_id" value="{{ r.id }}">
+                            <input type="text" name="admin_note" placeholder="note (optional)"
+                                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:5px 8px; font-size:11px; width:100px;">
+                            <button type="submit" name="status" value="approved"
+                                style="background:#2e7de0; color:#fff; border:none; border-radius:6px; padding:5px 10px; font-size:11px; cursor:pointer;">Approve</button>
+                            <button type="submit" name="status" value="rejected"
+                                style="background:var(--danger); color:#fff; border:none; border-radius:6px; padding:5px 10px; font-size:11px; cursor:pointer;">Reject</button>
+                        </form>
+                        {% elif r.status == 'approved' %}
+                        <form method="POST" action="{{ url_for('billing.admin_payment_requests') }}" style="display:inline;">
+                            <input type="hidden" name="request_id" value="{{ r.id }}">
+                            <input type="hidden" name="admin_note" value="{{ r.admin_note or '' }}">
+                            <button type="submit" name="status" value="paid"
+                                style="background:var(--success); color:#000; border:none; border-radius:6px; padding:5px 10px; font-size:11px; cursor:pointer;">Mark Paid</button>
+                        </form>
+                        {% else %}
+                        <span style="color:var(--muted); font-size:12px;">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="6" style="padding:40px; text-align:center; color:var(--muted);">No payment requests found.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% if requests.pages > 1 %}
+    <div style="padding:14px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <span style="font-size:13px; color:var(--muted);">Page {{ requests.page }} of {{ requests.pages }} — {{ requests.total }} total</span>
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+            {% if requests.has_prev %}
+            <a href="{{ url_for('billing.admin_payment_requests', page=requests.prev_num, fagent=request.args.get('fagent',''), fstatus=request.args.get('fstatus','')) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">‹ Prev</a>
+            {% endif %}
+            {% for p in range([1, requests.page-2]|max, [requests.pages+1, requests.page+3]|min) %}
+            <a href="{{ url_for('billing.admin_payment_requests', page=p, fagent=request.args.get('fagent',''), fstatus=request.args.get('fstatus','')) }}"
+               style="background:{% if p == requests.page %}var(--accent){% else %}var(--hover){% endif %}; color:{% if p == requests.page %}#000{% else %}var(--txt){% endif %}; border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">{{ p }}</a>
+            {% endfor %}
+            {% if requests.has_next %}
+            <a href="{{ url_for('billing.admin_payment_requests', page=requests.next_num, fagent=request.args.get('fagent',''), fstatus=request.args.get('fstatus','')) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">Next ›</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

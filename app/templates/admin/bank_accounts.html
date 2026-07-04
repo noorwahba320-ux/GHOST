@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Agent Bank Accounts{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-university"></i> Agent Bank / USDT Accounts</h4>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:16px;">
+    <form method="GET" action="{{ url_for('billing.admin_bank_accounts') }}" style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
+        <div>
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">AGENT</label>
+            <select name="fagent" onchange="this.form.submit()"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+                <option value="">All Agents</option>
+                {% for a in agents %}
+                <option value="{{ a.id }}" {% if request.args.get('fagent') == a.id|string %}selected{% endif %}>{{ a.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Agent</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Method</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Label</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Account Details</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Added On</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if accounts.items %}
+                {% for acc in accounts.items %}
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:12px 16px; color:var(--accent); font-weight:600;">{{ acc.agent.username if acc.agent else '—' }}</td>
+                    <td style="padding:12px 16px; color:var(--txt);">{{ acc.method }}</td>
+                    <td style="padding:12px 16px; color:var(--txt);">{{ acc.label or '—' }}</td>
+                    <td style="padding:12px 16px; color:var(--txt); font-family:monospace;">{{ acc.account_details }}</td>
+                    <td style="padding:12px 16px; color:var(--muted); white-space:nowrap;">{{ acc.created_at.strftime('%Y-%m-%d %H:%M') if acc.created_at else '—' }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="5" style="padding:40px; text-align:center; color:var(--muted);">No accounts found.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% if accounts.pages > 1 %}
+    <div style="padding:14px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <span style="font-size:13px; color:var(--muted);">Page {{ accounts.page }} of {{ accounts.pages }} — {{ accounts.total }} total</span>
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+            {% if accounts.has_prev %}
+            <a href="{{ url_for('billing.admin_bank_accounts', page=accounts.prev_num, fagent=request.args.get('fagent','')) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">‹ Prev</a>
+            {% endif %}
+            {% for p in range([1, accounts.page-2]|max, [accounts.pages+1, accounts.page+3]|min) %}
+            <a href="{{ url_for('billing.admin_bank_accounts', page=p, fagent=request.args.get('fagent','')) }}"
+               style="background:{% if p == accounts.page %}var(--accent){% else %}var(--hover){% endif %}; color:{% if p == accounts.page %}#000{% else %}var(--txt){% endif %}; border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">{{ p }}</a>
+            {% endfor %}
+            {% if accounts.has_next %}
+            <a href="{{ url_for('billing.admin_bank_accounts', page=accounts.next_num, fagent=request.args.get('fagent','')) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">Next ›</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

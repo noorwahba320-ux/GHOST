@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Branding — FLASH SMS{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:20px;">
+    <h4 style="margin:0;color:var(--accent);"><i class="fa fa-paint-brush"></i> Branding Settings</h4>
+    <span style="color:var(--muted);font-size:13px;">Customize the panel name, logo and colors — applies everywhere immediately.</span>
+</div>
+
+<form method="POST" enctype="multipart/form-data" style="max-width:520px;">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:20px;">
+
+        <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Panel Name</label>
+            <input type="text" name="panel_name" maxlength="100" value="{{ settings.panel_name or 'FLASH SMS' }}"
+                   style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--hover);color:var(--txt);font-size:14px;">
+        </div>
+
+        <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Logo</label>
+            {% if settings.logo_filename %}
+            <div style="margin-bottom:10px;">
+                <img src="{{ logo_url(settings.logo_filename) }}" alt="logo" style="max-height:48px;background:var(--hover);border-radius:8px;padding:6px 10px;">
+            </div>
+            {% endif %}
+            <input type="file" name="logo" accept=".png,.jpg,.jpeg,.svg,.webp"
+                   style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--hover);color:var(--txt);font-size:13px;">
+            <span style="display:block;margin-top:6px;font-size:12px;color:var(--muted);">PNG, JPG, SVG or WEBP. Leave empty to keep current logo.</span>
+        </div>
+
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:140px;">
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Primary Color</label>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <input type="color" name="primary_color" value="{{ settings.primary_color or '#4f46e5' }}" style="width:44px;height:38px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer;">
+                    <input type="text" value="{{ settings.primary_color or '#4f46e5' }}" readonly style="flex:1;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--hover);color:var(--txt);font-size:13px;font-family:monospace;">
+                </div>
+            </div>
+            <div style="flex:1;min-width:140px;">
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Secondary Color</label>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <input type="color" name="secondary_color" value="{{ settings.secondary_color or '#38bdf8' }}" style="width:44px;height:38px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer;">
+                    <input type="text" value="{{ settings.secondary_color or '#38bdf8' }}" readonly style="flex:1;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--hover);color:var(--txt);font-size:13px;font-family:monospace;">
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" style="background:var(--accent);border:none;color:#fff;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;">
+            <i class="fa fa-save"></i> Save Branding
+        </button>
+    </div>
+</form>
+
+<script>
+document.querySelectorAll('input[type=color]').forEach(function(colorInput){
+    colorInput.addEventListener('input', function(){
+        this.parentElement.querySelector('input[type=text]').value = this.value;
+    });
+});
+</script>
+
+{% endblock %}

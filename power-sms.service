@@ -1,0 +1,16 @@
+[Unit]
+Description=Power SMS Panel
+After=network.target
+
+[Service]
+User=CHANGE_ME_your_vps_username
+WorkingDirectory=CHANGE_ME_/full/path/to/Power-SMS-panel-main
+EnvironmentFile=CHANGE_ME_/full/path/to/Power-SMS-panel-main/.env
+ExecStart=CHANGE_ME_/full/path/to/Power-SMS-panel-main/venv/bin/gunicorn -c gunicorn_conf.py run:app
+Restart=always
+RestartSec=5
+StandardOutput=append:CHANGE_ME_/full/path/to/Power-SMS-panel-main/logs/service.log
+StandardError=append:CHANGE_ME_/full/path/to/Power-SMS-panel-main/logs/service.log
+
+[Install]
+WantedBy=multi-user.target

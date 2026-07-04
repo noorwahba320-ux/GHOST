@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Providers - FLASH SMS PANEL{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h4><i class="fa fa-plug"></i> Provider Management</h4>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}">{{ message }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="card" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h5 style="color:var(--txt);margin:0;"><i class="fa fa-list"></i> Provider List</h5>
+        <a href="{{ url_for('provider.add_provider') }}" style="background:var(--accent);color:#000;border:none;border-radius:6px;padding:8px 16px;font-weight:600;text-decoration:none;">
+            <i class="fa fa-plus"></i> Add Provider
+        </a>
+    </div>
+    <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:10px;color:var(--muted);font-size:13px;text-align:left;">NAME</th>
+                    <th style="padding:10px;color:var(--muted);font-size:13px;text-align:left;">TYPE</th>
+                    <th style="padding:10px;color:var(--muted);font-size:13px;text-align:left;">USERNAME</th>
+                    <th style="padding:10px;color:var(--muted);font-size:13px;text-align:left;">INTERVAL</th>
+                    <th style="padding:10px;color:var(--muted);font-size:13px;text-align:left;">STATUS</th>
+                    <th style="padding:10px;color:var(--muted);font-size:13px;text-align:left;">ACTIONS</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in providers %}
+                <tr style="border-bottom:1px solid var(--border);" id="row-{{ p.id }}">
+                    <td style="padding:10px;color:var(--txt);font-size:13px;font-weight:600;">{{ p.name }}</td>
+                    <td style="padding:10px;color:var(--muted);font-size:13px;">{{ p.ptype }}</td>
+                    <td style="padding:10px;color:var(--muted);font-size:13px;">{{ p.username }}</td>
+                    <td style="padding:10px;color:var(--accent);font-size:13px;font-weight:600;">{{ p.fetch_interval }}s</td>
+                    <td style="padding:10px;font-size:13px;" id="status-{{ p.id }}">
+                        {% if is_running(p.id) %}
+                        <span style="color:var(--success);">🟢 Running</span>
+                        {% else %}
+                        <span style="color:var(--danger);">🔴 Stopped</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:10px;">
+                        <button onclick="toggleProvider({{ p.id }})"
+                            id="btn-{{ p.id }}"
+                            style="background:{% if is_running(p.id) %}var(--danger){% else %}var(--success){% endif %};color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;margin-right:4px;">
+                            {% if is_running(p.id) %}Stop{% else %}Start{% endif %}
+                        </button>
+                        <a href="{{ url_for('provider.edit_provider', provider_id=p.id) }}"
+                            style="background:var(--accent);color:#000;border:none;border-radius:4px;padding:4px 10px;font-size:12px;text-decoration:none;margin-right:4px;">
+                            Edit
+                        </a>
+                        <form method="POST" action="{{ url_for('provider.delete_provider', provider_id=p.id) }}" style="display:inline;">
+                            <button type="submit" onclick="return confirm('Delete {{ p.name }}?')"
+                                style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="padding:20px;text-align:center;color:var(--muted);">No providers yet. Add one!</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function toggleProvider(id) {
+    fetch('/admin/providers/' + id + '/toggle', {method: 'POST'})
+    .then(r => r.json())
+    .then(data => {
+        var btn = document.getElementById('btn-' + id);
+        var status = document.getElementById('status-' + id);
+        if (data.status === 'started') {
+            btn.textContent = 'Stop';
+            btn.style.background = 'var(--danger)';
+            status.innerHTML = '<span style="color:var(--success);">🟢 Running</span>';
+        } else {
+            btn.textContent = 'Start';
+            btn.style.background = 'var(--success)';
+            status.innerHTML = '<span style="color:var(--danger);">🔴 Stopped</span>';
+        }
+    });
+}
+</script>
+{% endblock %}

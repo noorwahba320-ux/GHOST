@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% block title %}{% if current_user.is_test_account() %}Statistics{% else %}SMS CDR Reports{% endif %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap4.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.4.1/css/rowGroup.bootstrap4.min.css">
+<style>
+  .groupby-box{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:16px;}
+  .groupby-box label{color:var(--txt); font-weight:600; font-size:13px; margin-left:6px; margin-right:18px; cursor:pointer;}
+  .groupby-box input[type=checkbox]{transform:scale(1.15); cursor:pointer;}
+  .groupby-title{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; font-weight:700;}
+  #cdrTable_wrapper .dt-buttons{margin-bottom:10px;}
+  #cdrTable_wrapper .dt-button{background:var(--hover)!important; color:var(--txt)!important; border:1px solid var(--border)!important; font-size:12px!important; margin-right:4px;}
+  #cdrTable_wrapper .dt-button:hover{background:var(--accent)!important; color:#000!important;}
+  #cdrTable_filter input{background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:5px 10px;}
+  table.dataTable thead th{color:var(--muted)!important; border-bottom:1px solid var(--border)!important; background:transparent!important; padding:10px 14px!important;}
+  table.dataTable tbody td{color:var(--txt)!important; border-top:1px solid var(--border)!important; background:transparent!important; padding:10px 14px!important;}
+  table.dataTable tr.dtrg-group td{background:var(--hover)!important; color:var(--accent)!important; font-weight:700!important;}
+  #cdrTable_wrapper .dataTables_info, #cdrTable_wrapper .dataTables_length{color:var(--muted)!important;}
+  .col-month{display:none;}
+
+  /* Filter form: each field gets its own flexible column so nothing gets
+     cut off or overlaps on narrow mobile screens. */
+  .cdr-filter-field{flex:1 1 130px; min-width:110px;}
+  .cdr-filter-field input, .cdr-filter-field select{width:100%; box-sizing:border-box;}
+  @media (max-width:560px){
+      #filterForm{gap:12px;}
+      .cdr-filter-field{flex:1 1 100%;}
+      #filterForm button[type="submit"]{flex:1 1 100%;}
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-{% if current_user.is_test_account() %}bar-chart{% else %}file-text-o{% endif %}"></i> {% if current_user.is_test_account() %}Statistics — Received Codes{% else %}SMS CDR Reports{% endif %}</h4>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:16px;">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 16px;">
+        <div style="font-size:11px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Total SMS</div>
+        <div style="font-size:22px; font-weight:800; color:var(--accent);">{{ totals.total_sms if totals and totals.total_sms else 0 }}</div>
+    </div>
+    {% if not current_user.is_client() and not current_user.is_test_account() %}
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 16px;">
+        <div style="font-size:11px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Agent Payout</div>
+        <div style="font-size:22px; font-weight:800; color:var(--success);">${{ '%.4f'|format(totals.total_payout|float if totals and totals.total_payout else 0) }}</div>
+    </div>
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 16px;">
+        <div style="font-size:11px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Client Cost</div>
+        <div style="font-size:22px; font-weight:800; color:var(--warn);">${{ '%.4f'|format(totals.total_client|float if totals and totals.total_client else 0) }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:16px;">
+    <form method="GET" action="{{ url_for('main.sms_cdr_reports') }}" id="filterForm" style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
+        {% if not current_user.is_test_account() %}
+        <div class="cdr-filter-field">
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">FROM</label>
+            <input type="date" name="fdate1" value="{{ fdate1[:10] if fdate1 else '' }}"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+        </div>
+        <div class="cdr-filter-field">
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">TO</label>
+            <input type="date" name="fdate2" value="{{ fdate2[:10] if fdate2 else '' }}"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+        </div>
+        {% endif %}
+        {% if not current_user.is_test_account() %}
+        <div class="cdr-filter-field">
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">RANGE</label>
+            <select name="frange" style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+                <option value="">All Ranges</option>
+                {% for r in ranges %}
+                <option value="{{ r.id }}" {% if request.args.get('frange') == r.id|string %}selected{% endif %}>{{ r.name if r.name else '+' + r.prefix + ' — ' + r.country }}{% if r.operator %} ({{ r.operator }}){% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        {% if not current_user.is_client() and not current_user.is_test_account() %}
+        <div class="cdr-filter-field">
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">CLIENT</label>
+            <select name="fclient" style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+                <option value="">All Clients</option>
+                {% for c in clients %}
+                <option value="{{ c.id }}" {% if request.args.get('fclient') == c.id|string %}selected{% endif %}>{{ c.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <div class="cdr-filter-field">
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">NUMBER</label>
+            <input type="text" name="fnum" value="{{ request.args.get('fnum','') }}" placeholder="Number..."
+                {% if current_user.is_test_account() %}oninput="clearTimeout(window._fnumT); window._fnumT = setTimeout(function(){ document.getElementById('filterForm').submit(); }, 500);"{% endif %}
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+        </div>
+        {% if not current_user.is_test_account() %}
+        <div class="cdr-filter-field">
+            <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">SHOW</label>
+            <select name="per_page" onchange="document.getElementById('filterForm').submit()"
+                style="background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+                {% for n in [25, 50, 100] %}
+                <option value="{{ n }}" {% if request.args.get('per_page', '25') == n|string %}selected{% endif %}>{{ n }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        {% if not current_user.is_test_account() %}
+        <button type="submit" style="background:var(--info); color:#000; border:none; border-radius:6px; padding:8px 18px; font-size:13px; font-weight:700; cursor:pointer;">
+            <i class="fa fa-eye"></i> Show Report
+        </button>
+        <button type="submit" name="export" value="1" style="background:var(--warn); color:#000; border:none; border-radius:6px; padding:8px 18px; font-size:13px; font-weight:700; cursor:pointer;">
+            <i class="fa fa-download"></i> Export Report
+        </button>
+        {% endif %}
+    </form>
+</div>
+
+{% if not current_user.is_test_account() %}
+<div class="groupby-box">
+    <div class="groupby-title">Group By</div>
+    <input type="checkbox" class="groupby-chk" id="gb-date" data-col="0"><label for="gb-date">Date</label>
+    <input type="checkbox" class="groupby-chk" id="gb-month" data-col="7"><label for="gb-month">Month</label>
+    <input type="checkbox" class="groupby-chk" id="gb-range" data-col="1"><label for="gb-range">Range</label>
+    {% if not current_user.is_client() and not current_user.is_test_account() %}
+    <input type="checkbox" class="groupby-chk" id="gb-client" data-col="4"><label for="gb-client">Client</label>
+    {% endif %}
+    <input type="checkbox" class="groupby-chk" id="gb-number" data-col="2"><label for="gb-number">Number</label>
+    <input type="checkbox" class="groupby-chk" id="gb-cli" data-col="3"><label for="gb-cli">CLI</label>
+</div>
+{% endif %}
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table id="cdrTable" class="display" style="width:100%; font-size:13px;">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Range</th>
+                    <th>Number</th>
+                    <th>CLI</th>
+                    {% if not current_user.is_client() and not current_user.is_test_account() %}
+                    <th>Client</th>
+                    {% endif %}
+                    <th>SMS</th>
+                    {% if current_user.is_test_account() %}
+                    {% elif not current_user.is_client() %}
+                    <th>Agent Payout</th>
+                    {% else %}
+                    <th>OTP Price</th>
+                    {% endif %}
+                    <th class="col-month">Month</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if cdr_records.items %}
+                {% for cdr in cdr_records.items %}
+                <tr>
+                    <td style="white-space:nowrap;">{{ cdr.created_at.strftime('%Y-%m-%d %H:%M:%S') if cdr.created_at else '—' }}</td>
+                    <td style="white-space:nowrap;">{% if cdr.range_info %}{{ cdr.range_info.name if cdr.range_info.name else cdr.range_info.country }}{% if cdr.range_info.operator %} ({{ cdr.range_info.operator }}){% endif %}{% else %}—{% endif %}</td>
+                    <td style="font-family:monospace; color:var(--accent);">{{ cdr.sms_number.number if cdr.sms_number else '—' }}</td>
+                    <td style="white-space:nowrap;">{{ cdr.cli or '—' }}</td>
+                    {% if not current_user.is_client() and not current_user.is_test_account() %}
+                    <td style="white-space:nowrap; min-width:120px; padding-right:12px;">
+                        {% if cdr.client %}
+                        <div style="font-size:10px; color:var(--info); font-weight:700; text-transform:uppercase; letter-spacing:.5px;">Client</div>
+                        <div>{{ cdr.client.username }}</div>
+                        {% elif cdr.agent %}
+                        <div style="font-size:10px; color:var(--warn); font-weight:700; text-transform:uppercase; letter-spacing:.5px;">Agent</div>
+                        <div>{{ cdr.agent.username }}</div>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                    <td style="word-wrap:break-word; white-space:normal; min-width:200px;">{{ cdr.message if cdr.message else '—' }}</td>
+                    {% if current_user.is_test_account() %}
+                    {% elif not current_user.is_client() %}
+                    <td style="color:var(--success); white-space:nowrap;">${{ '%.4f'|format(cdr.agent_payout|float if cdr.agent_payout else 0) }}</td>
+                    {% else %}
+                    <td style="color:var(--success); white-space:nowrap;">${{ '%.4f'|format(cdr.client_payout|float if cdr.client_payout else 0) }}</td>
+                    {% endif %}
+                    <td class="col-month">{{ cdr.created_at.strftime('%Y-%m') if cdr.created_at else '—' }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="100%" style="padding:40px; text-align:center; color:var(--muted);">No CDR records found.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if cdr_records.pages > 1 %}
+    <div style="padding:14px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <span style="font-size:13px; color:var(--muted);">Page {{ cdr_records.page }} of {{ cdr_records.pages }} — {{ cdr_records.total }} total</span>
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+            {% if cdr_records.has_prev %}
+            <a href="{{ url_for('main.sms_cdr_reports', page=cdr_records.prev_num, fdate1=fdate1, fdate2=fdate2, frange=request.args.get('frange',''), fclient=request.args.get('fclient',''), fnum=request.args.get('fnum',''), per_page=request.args.get('per_page','25')) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">‹ Prev</a>
+            {% endif %}
+            {% for p in range([1, cdr_records.page-2]|max, [cdr_records.pages+1, cdr_records.page+3]|min) %}
+            <a href="{{ url_for('main.sms_cdr_reports', page=p, fdate1=fdate1, fdate2=fdate2, frange=request.args.get('frange',''), fclient=request.args.get('fclient',''), fnum=request.args.get('fnum',''), per_page=request.args.get('per_page','25')) }}"
+               style="background:{% if p == cdr_records.page %}var(--accent){% else %}var(--hover){% endif %}; color:{% if p == cdr_records.page %}#000{% else %}var(--txt){% endif %}; border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">{{ p }}</a>
+            {% endfor %}
+            {% if cdr_records.has_next %}
+            <a href="{{ url_for('main.sms_cdr_reports', page=cdr_records.next_num, fdate1=fdate1, fdate2=fdate2, frange=request.args.get('frange',''), fclient=request.args.get('fclient',''), fnum=request.args.get('fnum',''), per_page=request.args.get('per_page','25')) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">Next ›</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap4.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap4.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/rowgroup/1.4.1/js/dataTables.rowGroup.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.colVis.min.js"></script>
+<script>
+$(function () {
+    // Never show DataTables' default blocking alert() popup to end users.
+    // Any future warning (e.g. from a plugin edge case) is logged to the
+    // console instead, so the panel never gets stuck behind a native dialog.
+    $.fn.dataTable.ext.errMode = 'none';
+
+    var monthColIdx = $('#cdrTable thead th').length - 1; // hidden Month column is always last
+
+    var table = $('#cdrTable').DataTable({
+        paging: false,
+        info: true,
+        order: [],
+        columnDefs: [
+            { targets: monthColIdx, visible: false, searchable: false }
+        ],
+        // RowGroup must be initialized (even disabled) here, otherwise
+        // table.rowGroup() below has no instance to call and the
+        // "Group By" checkboxes silently do nothing.
+        rowGroup: {
+            dataSrc: 0,
+            enable: false
+        },
+        dom: 'Bfrtip',
+        buttons: [
+            { extend: 'copyHtml5', text: '<i class="fa fa-copy"></i> Copy', exportOptions: { columns: ':visible' } },
+            { extend: 'csvHtml5', text: '<i class="fa fa-file-text-o"></i> CSV', exportOptions: { columns: ':visible' } },
+            { extend: 'excelHtml5', text: '<i class="fa fa-file-excel-o"></i> Excel', exportOptions: { columns: ':visible' } },
+            { extend: 'print', text: '<i class="fa fa-print"></i> Print', exportOptions: { columns: ':visible' } }
+        ]
+    });
+
+    // Exclusive "Group By" checkboxes — checking one groups rows by that column.
+    // Sorting the table by the same column first is what makes the grouping
+    // show up as clean contiguous blocks instead of one group per row.
+    $('.groupby-chk').on('change', function () {
+        var $this = $(this);
+        if ($this.is(':checked')) {
+            $('.groupby-chk').not(this).prop('checked', false);
+            var col = $this.attr('id') === 'gb-month' ? monthColIdx : parseInt($this.data('col'), 10);
+            table.rowGroup().dataSrc(col).enable();
+            table.order([col, 'asc']).draw();
+        } else {
+            table.rowGroup().disable();
+            table.order([]).draw();
+        }
+    });
+});
+</script>
+{% endblock %}

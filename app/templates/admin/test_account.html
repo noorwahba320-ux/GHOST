@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Test Account Settings — FLASH SMS{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:20px;display:flex;align-items:center;flex-wrap:wrap;gap:12px;">
+    <h4 style="margin:0;color:var(--accent);"><i class="fa fa-flask"></i> Test Account Settings</h4>
+    <span style="background:rgba(79,70,229,.15);color:var(--accent);padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;">
+        {{ test.username }}
+    </span>
+    <form method="POST" action="{{ url_for('admin.test_account_login_as') }}" style="margin:0;margin-left:auto;">
+        <button type="submit" style="background:var(--accent);border:none;color:#fff;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:700;">
+            <i class="fa fa-sign-in"></i> Login as {{ test.username }}
+        </button>
+    </form>
+</div>
+
+<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:14px 20px;margin-bottom:22px;font-size:13px;color:var(--txt);">
+    <i class="fa fa-info-circle" style="color:var(--success);"></i>
+    This is a public demo account — anyone can log in directly from the login page with
+    <code style="background:var(--hover);padding:2px 8px;border-radius:6px;">Test123</code> / <code style="background:var(--hover);padding:2px 8px;border-radius:6px;">Test123</code>.
+</div>
+
+<!-- Stats row -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px;">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;">
+        <div style="font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Total Numbers</div>
+        <div style="font-size:28px;font-weight:900;color:var(--txt);">{{ numbers.total }} <span style="font-size:14px;color:var(--muted);font-weight:600;">/ {{ max_numbers }}</span></div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;">
+        <div style="font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Total CDRs</div>
+        <div style="font-size:28px;font-weight:900;color:var(--success);">{{ total_cdrs }}</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;">
+        <div style="font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">CDRs (Last 7 days)</div>
+        <div style="font-size:28px;font-weight:900;color:var(--accent);">{{ last7 }}</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;">
+        <div style="font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">API Token</div>
+        <code style="font-size:11px;color:var(--accent);word-break:break-all;">{{ test.api_token }}</code>
+    </div>
+</div>
+
+<!-- Number limit + add numbers -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:22px;">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;">
+        <div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:4px;"><i class="fa fa-sliders" style="color:var(--accent);"></i> Numbers Limit</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Caps how many numbers the Test account can ever hold (auto-assigned or manual). {{ remaining }} slot{{ 's' if remaining != 1 else '' }} left.</div>
+        <form method="POST" action="{{ url_for('admin.test_account_set_limit') }}" style="display:flex;gap:8px;">
+            <input type="number" name="max_numbers" min="0" value="{{ max_numbers }}" required
+                style="flex:1;background:var(--hover);border:1px solid var(--border);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:13px;">
+            <button type="submit" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                <i class="fa fa-check"></i> Save
+            </button>
+        </form>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;">
+        <div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:4px;"><i class="fa fa-plus-circle" style="color:var(--success);"></i> Add Numbers to Test Account</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Pulls unassigned numbers from the chosen range, up to the limit above.</div>
+        {% if ranges %}
+        <form method="POST" action="{{ url_for('admin.test_account_add_numbers') }}" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select name="range_id" required style="flex:1 1 140px;background:var(--hover);border:1px solid var(--border);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:13px;">
+                {% for r in ranges %}
+                <option value="{{ r.id }}">{{ r.name if r.name else '+' + r.prefix + ' — ' + r.country }}{% if r.operator %} ({{ r.operator }}){% endif %}</option>
+                {% endfor %}
+            </select>
+            <input type="number" name="quantity" min="1" value="10" required placeholder="Qty"
+                style="width:80px;background:var(--hover);border:1px solid var(--border);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:13px;">
+            <button type="submit" style="background:var(--success);color:#000;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                <i class="fa fa-plus"></i> Add
+            </button>
+        </form>
+        {% else %}
+        <div style="font-size:12px;color:var(--muted);">No active ranges available yet — create a range first.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Danger zone -->
+<div style="background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.3);border-radius:12px;padding:16px 20px;margin-bottom:22px;display:flex;align-items:center;flex-wrap:wrap;gap:12px;">
+    <span style="color:#fca5a5;font-size:13px;font-weight:700;flex:1;"><i class="fa fa-exclamation-triangle"></i> Delete all numbers from Test account (they return to range as available)</span>
+    <form method="POST" action="{{ url_for('admin.test_delete_all_numbers') }}"
+          onsubmit="return confirm('Remove ALL numbers from Test123? They return to available pool.');">
+        <button type="submit" style="background:rgba(220,38,38,.18);border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:700;">
+            <i class="fa fa-trash"></i> Clear All Numbers
+        </button>
+    </form>
+</div>
+
+<!-- Numbers table -->
+<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--txt);">
+        Assigned Numbers ({{ numbers.total }})
+        <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:8px;">— auto-assigned when ranges are added, or add manually above</span>
+    </div>
+    {% if numbers.items %}
+    <table style="width:100%;border-collapse:collapse;">
+        <thead>
+            <tr style="background:var(--hover);">
+                <th style="padding:10px 16px;text-align:left;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Number</th>
+                <th style="padding:10px 16px;text-align:left;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Range</th>
+                <th style="padding:10px 16px;text-align:left;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Assigned</th>
+                <th style="padding:10px 16px;text-align:left;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Status</th>
+                <th style="padding:10px 16px;text-align:center;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for num in numbers.items %}
+            <tr style="border-top:1px solid var(--border);">
+                <td style="padding:10px 16px;font-family:monospace;color:var(--txt);font-size:13px;">{{ num.number }}</td>
+                <td style="padding:10px 16px;font-size:12px;color:var(--muted);">{{ num.range.name if num.range else '—' }}</td>
+                <td style="padding:10px 16px;font-size:12px;color:var(--muted);">{{ num.assigned_at.strftime('%Y-%m-%d') if num.assigned_at else '—' }}</td>
+                <td style="padding:10px 16px;">
+                    <span style="background:rgba(16,185,129,.12);color:var(--success);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;">{{ num.status }}</span>
+                </td>
+                <td style="padding:10px 16px;text-align:center;">
+                    <form method="POST" action="{{ url_for('admin.test_delete_number', num_id=num.id) }}"
+                          onsubmit="return confirm('Remove {{ num.number }} from Test account?');" style="display:inline;">
+                        <button type="submit" style="background:rgba(220,38,38,.1);border:1px solid var(--danger);color:var(--danger);border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <!-- Pagination -->
+    {% if numbers.pages > 1 %}
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
+        {% for pg in numbers.iter_pages(left_edge=1,right_edge=1,left_current=2,right_current=2) %}
+            {% if pg %}
+                <a href="?page={{ pg }}" style="padding:5px 11px;border-radius:7px;font-size:13px;border:1px solid var(--border);
+                   {% if pg == numbers.page %}background:var(--accent);color:#fff;border-color:var(--accent);{% else %}background:var(--hover);color:var(--txt);{% endif %}">{{ pg }}</a>
+            {% else %}
+                <span style="padding:5px 6px;color:var(--muted);">…</span>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div style="padding:32px;text-align:center;color:var(--muted);">
+        <i class="fa fa-inbox" style="font-size:32px;margin-bottom:10px;display:block;"></i>
+        No numbers assigned to Test account yet.<br>
+        <small>They are auto-assigned when you create a new range (up to your limit above), or you can add some manually.</small>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

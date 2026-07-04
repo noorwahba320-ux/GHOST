@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}My Clients{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-users"></i> My Clients</h4>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a href="{{ url_for('admin.agent_client_stats') }}" style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:8px 18px; font-size:13px; font-weight:700; text-decoration:none;">
+            <i class="fa fa-bar-chart"></i> Client Statistics
+        </a>
+        <a href="{{ url_for('admin.agent_create_client') }}" style="background:var(--accent); color:#000; border-radius:6px; padding:8px 18px; font-size:13px; font-weight:700; text-decoration:none;">
+            <i class="fa fa-plus"></i> Create Client
+        </a>
+    </div>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:16px;">
+    <form method="GET" style="display:flex; gap:8px;">
+        <input type="text" name="search" value="{{ request.args.get('search','') }}" placeholder="Search by username, email, name..."
+            style="flex:1; background:var(--hover); border:1px solid var(--border); color:var(--txt); border-radius:6px; padding:7px 12px; font-size:13px;">
+        <button type="submit" style="background:var(--accent); color:#000; border:none; border-radius:6px; padding:8px 18px; font-size:13px; font-weight:700; cursor:pointer;">
+            <i class="fa fa-search"></i> Search
+        </button>
+    </form>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Username</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Email</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Name</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Company</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Country</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Status</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Created</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if clients.items %}
+                {% for client in clients.items %}
+                <tr style="border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+                    <td style="padding:12px 16px; color:var(--accent); font-weight:600;">{{ client.username }}</td>
+                    <td style="padding:12px 16px; color:var(--muted); font-size:12px;">{{ client.email }}</td>
+                    <td style="padding:12px 16px; color:var(--txt);">{{ client.name or '—' }}</td>
+                    <td style="padding:12px 16px; color:var(--muted);">{{ client.company or '—' }}</td>
+                    <td style="padding:12px 16px; color:var(--muted);">{{ client.country or '—' }}</td>
+                    <td style="padding:12px 16px;">
+                        {% if client.is_active %}
+                        <span style="background:rgba(46,213,115,.15); color:var(--success); padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700;">Active</span>
+                        {% else %}
+                        <span style="background:rgba(255,71,87,.15); color:var(--danger); padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700;">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:12px 16px; color:var(--muted); font-size:12px;">{{ client.created_at.strftime('%Y-%m-%d') if client.created_at else '—' }}</td>
+                    <td style="padding:12px 16px; white-space:nowrap;">
+                        <a href="{{ url_for('admin.agent_edit_client', client_id=client.id) }}" title="Edit / Change Password" style="color:var(--accent); text-decoration:none; margin-right:14px;">
+                            <i class="fa fa-edit"></i> Edit
+                        </a>
+                        <form method="POST" action="{{ url_for('admin.agent_delete_client', client_id=client.id) }}" style="display:inline;" onsubmit="return confirm('Delete client {{ client.username }}? This cannot be undone.');">
+                            <button type="submit" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:13px; padding:0;">
+                                <i class="fa fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="8" style="padding:40px; text-align:center; color:var(--muted);">
+                        <i class="fa fa-inbox" style="font-size:32px; display:block; margin-bottom:10px;"></i>
+                        No clients found.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if clients.pages > 1 %}
+    <div style="padding:14px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <span style="font-size:13px; color:var(--muted);">Page {{ clients.page }} of {{ clients.pages }}</span>
+        <div style="display:flex; gap:4px;">
+            {% if clients.has_prev %}
+            <a href="{{ url_for('admin.agent_clients', page=clients.prev_num, search=request.args.get('search','')) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">‹ Prev</a>
+            {% endif %}
+            {% if clients.has_next %}
+            <a href="{{ url_for('admin.agent_clients', page=clients.next_num, search=request.args.get('search','')) }}"
+               style="background:var(--hover); color:var(--txt); border:1px solid var(--border); border-radius:6px; padding:5px 12px; text-decoration:none; font-size:13px;">Next ›</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

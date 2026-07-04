@@ -1,0 +1,14 @@
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+Flask-Bcrypt==1.0.1
+Flask-CORS==4.0.0
+Werkzeug==3.0.1
+python-dotenv==1.0.0
+PyJWT==2.8.0
+cryptography==41.0.7
+psycopg2-binary==2.9.9
+gunicorn==21.2.0
+requests==2.31.0
+beautifulsoup4==4.12.3
+APScheduler==3.10.4

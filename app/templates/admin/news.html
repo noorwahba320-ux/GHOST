@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}News — Admin{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+    <h4 style="margin:0; color:var(--accent);"><i class="fa fa-newspaper-o"></i> News Management</h4>
+    <a href="{{ url_for('admin.create_news') }}" style="background:var(--accent); color:#000; border-radius:6px; padding:8px 18px; font-size:13px; font-weight:700; text-decoration:none;">
+        <i class="fa fa-plus"></i> Add News
+    </a>
+</div>
+
+<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Headline</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Content</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Created</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Status</th>
+                    <th style="padding:12px 16px; text-align:left; color:var(--muted); font-weight:600;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in news_list.items %}
+                <tr style="border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+                    <td style="padding:12px 16px; font-weight:600; color:var(--txt);">{{ item.headline }}</td>
+                    <td style="padding:12px 16px; color:var(--muted);">{{ item.content[:80] if item.content else '—' }}{% if item.content and item.content|length > 80 %}...{% endif %}</td>
+                    <td style="padding:12px 16px; color:var(--muted); font-size:12px;">{{ item.created_at.strftime('%Y-%m-%d') if item.created_at else '—' }}</td>
+                    <td style="padding:12px 16px;">
+                        {% if item.is_active %}
+                        <span style="background:rgba(46,213,115,.15); color:var(--success); padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700;">Active</span>
+                        {% else %}
+                        <span style="background:rgba(255,71,87,.15); color:var(--danger); padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700;">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:12px 16px;">
+                        <div style="display:flex; gap:6px;">
+                            <a href="{{ url_for('admin.edit_news', news_id=item.id) }}" style="background:var(--accent); color:#000; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:700; text-decoration:none;">
+                                <i class="fa fa-edit"></i> Edit
+                            </a>
+                            <form method="POST" action="{{ url_for('admin.delete_news', news_id=item.id) }}" onsubmit="return confirm('Delete this news?')">
+                                <button type="submit" style="background:var(--danger); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11px; cursor:pointer;">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="padding:40px; text-align:center; color:var(--muted);">No news found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
